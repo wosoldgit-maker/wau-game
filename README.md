@@ -17,3 +17,17 @@ To install it, tap **Share → Add to Home Screen**. It then opens full screen l
 - `index.html`: the whole game (HTML, CSS and JavaScript, everything drawn on a canvas)
 - `manifest.json`: settings for "Add to Home Screen"
 - `icon.svg`: app icon, drawn with SVG code
+
+---
+
+# Lipas Smash
+
+A tap game in `lipas/index.html`. Cockroaches crawl across the table towards your fried chicken. Tap them before they get there.
+
+- There are 5 kinds of cockroach: German, American, Brown-banded, Oriental and Hissing. Each one has its own size, speed and points. Oriental takes 2 taps and Hissing takes 3.
+- New kinds join the game over time, and more of them come, faster.
+- Each cockroach that reaches the plate eats a piece of chicken. Lose all 3 pieces and the game is over.
+- Spray cans sometimes appear on the table. Tap one to pick it up (you can hold up to 3), then press the spray button to wipe out every cockroach on screen.
+- Your best score is saved on the phone.
+
+Play it at `/lipas/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/lipas/
