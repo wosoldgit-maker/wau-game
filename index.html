@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Fill the whole screen (even behind the notch) and block pinch-zoom -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Wau Terbang</title>
+
+<!-- "Add to Home Screen" settings -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" id="appleIcon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wau Terbang">
+<meta name="theme-color" content="#ff9a5a">
+
+<style>
+  /* Make the page exactly the size of the screen, with no scrolling */
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    background: #ff9a5a;
+    /* Stop text selection, the long-press menu and the grey tap flash */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Stop double-tap zoom and swipe scrolling */
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  /* Invisible helper used to read the notch / home-bar sizes */
+  #safe {
+    position: fixed;
+    visibility: hidden;
+    pointer-events: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="safe"></div>
+
+<script>
+// ---------- Setup ----------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let W = 0, H = 0;      // screen size in CSS pixels
+let s = 1;             // scale factor so the game looks the same on any phone
+let safeTop = 0;       // space taken by the notch
+let safeBottom = 0;    // space taken by the home bar
+let groundY = 0;       // where the ground starts
+
+// Resize the canvas to fill the screen (sharp on Retina screens too)
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw using CSS pixels
+
+  // Read the notch sizes from the helper div
+  const safeStyle = getComputedStyle(document.getElementById("safe"));
+  safeTop = parseFloat(safeStyle.paddingTop) || 0;
+  safeBottom = parseFloat(safeStyle.paddingBottom) || 0;
+
+  s = Math.min(W / 400, H / 800);
+  groundY = H - 60 * s - safeBottom;
+
+  // If we are not playing, put the kite back in its start spot
+  if (state !== "play") resetGame();
+}
+
+// ---------- Best score (saved on the phone) ----------
+function loadBest() {
+  try { return Number(localStorage.getItem("wauTerbangBest")) || 0; }
+  catch (e) { return 0; } // private mode can block storage
+}
+function saveBest(value) {
+  try { localStorage.setItem("wauTerbangBest", value); } catch (e) {}
+}
+
+// ---------- Game variables ----------
+let state = "start";   // "start", "play" or "over"
+let score = 0;
+let best = loadBest();
+let newBest = false;
+let speed = 0;         // how fast obstacles move left (pixels per second)
+let distance = 0;      // distance since the last obstacle was made
+let obstacles = [];
+let overTime = 0;      // when the game ended (so a fast tap doesn't retry at once)
+let time = 0;          // total time, used for animations
+let bgOffset = 0;      // scrolling for the background hills
+
+const kite = { x: 0, y: 0, vy: 0, r: 0 };
+
+const BUILDING_COLOURS = ["#e76f51", "#2a9d8f", "#e9c46a", "#8ab17d", "#6d597a", "#f4a261", "#457b9d"];
+
+function resetGame() {
+  score = 0;
+  newBest = false;
+  speed = 170 * s;
+  obstacles = [];
+  distance = 0;
+  kite.x = W * 0.3;
+  kite.y = H * 0.45;
+  kite.vy = 0;
+  kite.r = 17 * s; // hit circle (a bit smaller than the drawing, to be fair)
+}
+
+// ---------- Controls ----------
+function tap() {
+  if (state === "start") {
+    resetGame();
+    state = "play";
+    flap();
+  } else if (state === "play") {
+    flap();
+  } else if (state === "over" && time - overTime > 0.6) {
+    state = "start";
+    resetGame();
+  }
+}
+
+function flap() {
+  kite.vy = -430 * s; // jump upwards
+}
+
+canvas.addEventListener("pointerdown", function (e) {
+  e.preventDefault();
+  tap();
+});
+// Stop iPhone zoom / scroll gestures
+document.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+document.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+document.addEventListener("gesturestart", e => e.preventDefault());
+document.addEventListener("dblclick", e => e.preventDefault());
+// Space bar works on a computer
+document.addEventListener("keydown", function (e) {
+  if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); tap(); }
+});
+
+// ---------- Obstacles ----------
+function addObstacle() {
+  const width = 72 * s;
+  const gap = Math.max(170 * s, 215 * s - score * 2 * s); // gap shrinks a little
+  const minCentre = safeTop + 70 * s + gap / 2;
+  const maxCentre = groundY - 50 * s - gap / 2;
+  const centre = minCentre + Math.random() * (maxCentre - minCentre);
+  obstacles.push({
+    x: W + 10,
+    width: width,
+    top: centre - gap / 2,     // bottom edge of the storm cloud
+    bottom: centre + gap / 2,  // roof of the building
+    colour: BUILDING_COLOURS[Math.floor(Math.random() * BUILDING_COLOURS.length)],
+    passed: false
+  });
+}
+
+// Does a circle touch a rectangle?
+function circleHitsRect(cx, cy, r, x, y, w, h) {
+  const nearestX = Math.max(x, Math.min(cx, x + w));
+  const nearestY = Math.max(y, Math.min(cy, y + h));
+  const dx = cx - nearestX, dy = cy - nearestY;
+  return dx * dx + dy * dy < r * r;
+}
+
+function gameOver() {
+  state = "over";
+  overTime = time;
+  if (score > best) {
+    best = score;
+    newBest = true;
+    saveBest(best);
+  }
+}
+
+// ---------- Update (game rules) ----------
+function update(dt) {
+  time += dt;
+
+  if (state === "start") {
+    // Kite gently bobs up and down
+    kite.y = H * 0.45 + Math.sin(time * 3) * 12 * s;
+    bgOffset += 40 * s * dt;
+    return;
+  }
+  if (state === "over") {
+    // Kite falls to the ground
+    if (kite.y < groundY - kite.r) {
+      kite.vy += 1500 * s * dt;
+      kite.y = Math.min(kite.y + kite.vy * dt, groundY - kite.r);
+    }
+    return;
+  }
+
+  // Gravity pulls the kite down
+  kite.vy += 1300 * s * dt;
+  kite.vy = Math.min(kite.vy, 600 * s); // max fall speed
+  kite.y += kite.vy * dt;
+  if (kite.y < kite.r) { kite.y = kite.r; kite.vy = 0; } // can't leave the top
+
+  // Speed goes up slowly (with a limit)
+  speed = Math.min(speed + 3 * s * dt, 330 * s);
+  bgOffset += speed * 0.25 * dt;
+
+  // Make a new obstacle every so often
+  distance += speed * dt;
+  if (obstacles.length === 0 || distance > 250 * s) {
+    addObstacle();
+    distance = 0;
+  }
+
+  // Move obstacles, score points and check for crashes
+  for (const ob of obstacles) {
+    ob.x -= speed * dt;
+
+    if (!ob.passed && ob.x + ob.width < kite.x) {
+      ob.passed = true;
+      score++;
+    }
+
+    const hitCloud = circleHitsRect(kite.x, kite.y, kite.r, ob.x + 4 * s, 0, ob.width - 8 * s, ob.top);
+    const hitBuilding = circleHitsRect(kite.x, kite.y, kite.r, ob.x, ob.bottom, ob.width, groundY - ob.bottom);
+    if (hitCloud || hitBuilding) gameOver();
+  }
+
+  // Remove obstacles that have left the screen
+  obstacles = obstacles.filter(ob => ob.x + ob.width > -60 * s);
+
+  // Hit the ground?
+  if (kite.y + kite.r > groundY) {
+    kite.y = groundY - kite.r;
+    gameOver();
+  }
+}
+
+// ---------- Drawing ----------
+function drawBackground() {
+  // Sunset sky
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#5ec8f2");
+  sky.addColorStop(0.6, "#ffd59e");
+  sky.addColorStop(1, "#ff9a5a");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Sun
+  ctx.fillStyle = "rgba(255, 240, 180, 0.9)";
+  ctx.beginPath();
+  ctx.arc(W * 0.75, H * 0.3, 45 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Soft white clouds drifting slowly
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  for (let i = 0; i < 4; i++) {
+    const span = W + 200 * s;
+    const x = ((i * 170 * s - bgOffset * 0.3) % span + span) % span - 100 * s;
+    const y = safeTop + (90 + i * 70) * s;
+    puff(x, y, 22 * s);
+  }
+
+  // Far hills (move slowly for a 3D feel)
+  drawHills("#7fb77e", groundY - 70 * s, 50 * s, 0.4, 0.010);
+  drawHills("#5a9e5c", groundY - 30 * s, 35 * s, 0.7, 0.018);
+}
+
+function puff(x, y, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.arc(x + r, y - r * 0.5, r * 1.1, 0, Math.PI * 2);
+  ctx.arc(x + r * 2, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Wavy hills made from a sine wave
+function drawHills(colour, baseY, height, parallax, waviness) {
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  for (let x = 0; x <= W; x += 8) {
+    const y = baseY - Math.sin((x + bgOffset * parallax) * waviness / s) * height * 0.5;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, groundY);
+  ctx.fill();
+}
+
+function drawGround() {
+  // Grass
+  ctx.fillStyle = "#3f8f3f";
+  ctx.fillRect(0, groundY, W, H - groundY);
+  // Light strip on top
+  ctx.fillStyle = "#6cc04a";
+  ctx.fillRect(0, groundY, W, 10 * s);
+  // Moving stripes so you can feel the speed
+  ctx.fillStyle = "#357a35";
+  const step = 30 * s;
+  const shift = (bgOffset * 4) % step;
+  for (let x = -shift; x < W; x += step) {
+    ctx.fillRect(x, groundY + 18 * s, 14 * s, 6 * s);
+  }
+}
+
+function drawBuilding(ob) {
+  const x = ob.x, y = ob.bottom, w = ob.width, h = groundY - ob.bottom;
+  // Main block
+  ctx.fillStyle = ob.colour;
+  ctx.fillRect(x, y, w, h);
+  // Roof edge
+  ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+  ctx.fillRect(x - 4 * s, y, w + 8 * s, 8 * s);
+  // Antenna
+  ctx.fillRect(x + w * 0.7, y - 16 * s, 3 * s, 16 * s);
+  // Windows
+  ctx.fillStyle = "#fff3b0";
+  const winW = 10 * s, winH = 12 * s;
+  for (let wy = y + 18 * s; wy < groundY - winH; wy += 24 * s) {
+    for (let wx = x + 10 * s; wx < x + w - winW - 4 * s; wx += 20 * s) {
+      ctx.fillRect(wx, wy, winW, winH);
+    }
+  }
+}
+
+function drawStormCloud(ob) {
+  const x = ob.x, w = ob.width, bottom = ob.top;
+  const r = w * 0.32;
+  ctx.fillStyle = "#4a4e69";
+  // Tall part reaching up to the top of the screen
+  ctx.fillRect(x, 0, w, bottom - r);
+  // Puffy bottom
+  ctx.beginPath();
+  ctx.arc(x + r * 0.6, bottom - r, r, 0, Math.PI * 2);
+  ctx.arc(x + w / 2, bottom - r * 0.9, r * 1.05, 0, Math.PI * 2);
+  ctx.arc(x + w - r * 0.6, bottom - r, r, 0, Math.PI * 2);
+  ctx.fill();
+  // Bumps along both sides so it looks fluffy
+  for (let y = r; y < bottom - r * 1.5; y += r * 1.6) {
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.5, 0, Math.PI * 2);
+    ctx.arc(x + w, y + r * 0.8, r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Darker shading
+  ctx.fillStyle = "#22223b";
+  ctx.fillRect(x + w * 0.15, 0, w * 0.12, bottom - r * 1.5);
+  // Lightning bolt that flickers
+  if (Math.sin(time * 7 + x * 0.05) > 0.6) {
+    ctx.fillStyle = "#ffe066";
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.55, bottom - r);
+    ctx.lineTo(x + w * 0.38, bottom + 14 * s);
+    ctx.lineTo(x + w * 0.5, bottom + 12 * s);
+    ctx.lineTo(x + w * 0.42, bottom + 30 * s);
+    ctx.lineTo(x + w * 0.65, bottom + 5 * s);
+    ctx.lineTo(x + w * 0.53, bottom + 7 * s);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// The wau kite. Drawn around (0, 0); "size" is about half its width.
+function drawWau(c, size, t) {
+  const u = size / 34; // 1 unit of the drawing
+  c.save();
+  c.scale(u, u);
+  c.lineJoin = "round";
+  c.lineWidth = 2;
+  c.strokeStyle = "#3b1f0e";
+
+  // Wavy ribbons hanging from the wing tips
+  c.lineWidth = 3;
+  for (const side of [-1, 1]) {
+    c.strokeStyle = side < 0 ? "#ff3d7f" : "#00b4d8";
+    c.beginPath();
+    c.moveTo(side * 32, -6);
+    for (let i = 1; i <= 6; i++) {
+      c.lineTo(side * (32 + i * 1.5), -6 + i * 6 + Math.sin(t * 10 + i) * 3);
+    }
+    c.stroke();
+  }
+  c.lineWidth = 2;
+  c.strokeStyle = "#3b1f0e";
+
+  // Bow on top (the "busur" that hums in the wind)
+  c.beginPath();
+  c.moveTo(-26, -20);
+  c.quadraticCurveTo(0, -38, 26, -20);
+  c.stroke();
+
+  // Wings (red)
+  c.fillStyle = "#e63946";
+  c.beginPath();
+  c.moveTo(0, -18);
+  c.quadraticCurveTo(-28, -26, -34, -6);
+  c.quadraticCurveTo(-18, -2, 0, 2);
+  c.quadraticCurveTo(18, -2, 34, -6);
+  c.quadraticCurveTo(28, -26, 0, -18);
+  c.fill();
+  c.stroke();
+
+  // Yellow pattern on the wings
+  c.fillStyle = "#ffd60a";
+  c.beginPath();
+  c.ellipse(-16, -10, 8, 4, -0.2, 0, Math.PI * 2);
+  c.ellipse(16, -10, 8, 4, 0.2, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = "#2a9d8f";
+  c.beginPath();
+  c.arc(-16, -10, 2, 0, Math.PI * 2);
+  c.arc(16, -10, 2, 0, Math.PI * 2);
+  c.fill();
+
+  // Head (blue triangle)
+  c.fillStyle = "#1d4ed8";
+  c.beginPath();
+  c.moveTo(0, -30);
+  c.lineTo(-7, -16);
+  c.lineTo(7, -16);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  // Waist (green)
+  c.fillStyle = "#2a9d8f";
+  c.fillRect(-4, 0, 8, 10);
+  c.strokeRect(-4, 0, 8, 10);
+
+  // Moon-shaped tail ("bulan"), yellow with a blue edge
+  c.fillStyle = "#ffd60a";
+  c.beginPath();
+  c.moveTo(-22, 8);
+  c.quadraticCurveTo(0, 36, 22, 8);
+  c.quadraticCurveTo(0, 20, -22, 8);
+  c.fill();
+  c.stroke();
+
+  // Middle spine
+  c.beginPath();
+  c.moveTo(0, -30);
+  c.lineTo(0, 24);
+  c.stroke();
+
+  c.restore();
+}
+
+function drawKite() {
+  ctx.save();
+  ctx.translate(kite.x, kite.y);
+  // Tilt the kite: nose up when rising, nose down when falling
+  const tilt = state === "start" ? Math.sin(time * 2) * 0.08 : Math.max(-0.35, Math.min(0.45, kite.vy / (1000 * s)));
+  ctx.rotate(tilt);
+  drawWau(ctx, 36 * s, time);
+  ctx.restore();
+}
+
+// Text with a dark outline so it's easy to read
+function text(str, x, y, size, colour) {
+  ctx.font = "800 " + size + "px system-ui, -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = size / 6;
+  ctx.strokeStyle = "#3b1f0e";
+  ctx.lineJoin = "round";
+  ctx.strokeText(str, x, y);
+  ctx.fillStyle = colour || "#ffffff";
+  ctx.fillText(str, x, y);
+}
+
+function drawScreens() {
+  const cx = W / 2;
+
+  if (state === "play") {
+    // Score at the top, below the notch
+    text(String(score), cx, safeTop + 45 * s, 56 * s);
+  }
+
+  if (state === "start") {
+    text("Wau Terbang", cx, H * 0.2 + safeTop / 2, 52 * s, "#ffd60a");
+    // Blink "Tap to start"
+    if (Math.floor(time * 2) % 2 === 0) text("Tap to start", cx, H * 0.62, 30 * s);
+    if (best > 0) text("Best: " + best, cx, H * 0.7, 24 * s);
+  }
+
+  if (state === "over") {
+    // Panel in the middle
+    const pw = 280 * s, ph = 230 * s;
+    const px = cx - pw / 2, py = H * 0.42 - ph / 2;
+    ctx.fillStyle = "rgba(255, 248, 230, 0.95)";
+    ctx.strokeStyle = "#3b1f0e";
+    ctx.lineWidth = 4 * s;
+    ctx.beginPath();
+    ctx.roundRect(px, py, pw, ph, 20 * s);
+    ctx.fill();
+    ctx.stroke();
+
+    text("Game Over", cx, py + 40 * s, 40 * s, "#e63946");
+    text("Score: " + score, cx, py + 95 * s, 30 * s);
+    text("Best: " + best, cx, py + 135 * s, 30 * s, "#ffd60a");
+    if (newBest) text("New best!", cx, py + 180 * s, 24 * s, "#2a9d8f");
+    if (time - overTime > 0.6) text("Tap to retry", cx, py + ph + 40 * s, 30 * s);
+  }
+}
+
+function draw() {
+  drawBackground();
+  for (const ob of obstacles) {
+    drawBuilding(ob);
+    drawStormCloud(ob);
+  }
+  drawGround();
+  drawKite();
+  drawScreens();
+}
+
+// ---------- Main loop ----------
+let lastTime = 0;
+function loop(now) {
+  // dt = seconds since the last frame (works on 60Hz and 120Hz screens)
+  const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+  lastTime = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ---------- Home Screen icon ----------
+// iPhone needs a PNG icon, so we draw one with the same kite code.
+function makeAppleIcon() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 180;
+  const g = c.getContext("2d");
+  const sky = g.createLinearGradient(0, 0, 0, 180);
+  sky.addColorStop(0, "#5ec8f2");
+  sky.addColorStop(1, "#ff9a5a");
+  g.fillStyle = sky;
+  g.fillRect(0, 0, 180, 180);
+  g.translate(90, 88);
+  drawWau(g, 68, 0);
+  document.getElementById("appleIcon").href = c.toDataURL("image/png");
+}
+
+// ---------- Start ----------
+window.addEventListener("resize", resize);
+resize();
+makeAppleIcon();
+requestAnimationFrame(function (now) {
+  lastTime = now;
+  loop(now);
+});
+</script>
+</body>
+</html>
