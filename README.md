@@ -31,3 +31,18 @@ A tap game in `lipas/index.html`. Cockroaches crawl across the table towards you
 - Your best score is saved on the phone.
 
 Play it at `/lipas/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/lipas/
+
+---
+
+# Jom Baca Iqra
+
+A flashcard game in `iqra/index.html` that helps kids learn to read Iqra and short surahs of the Al-Quran.
+
+- Pick a deck: Iqra 1 to 5 (letters, joined letters, mad, baris, tanwin, sukun, alif lam, sabdu) or a short surah (Al-Fatihah, Al-Ikhlas, Al-Falaq, An-Nas, Al-Kauthar), one ayat per card.
+- The child reads the card, then presses **🔊 Semak** to hear the correct reading and see the rumi spelling.
+- Then press **✅ Betul** or **❌ Salah**.
+- At the end, press **🔁 Ulang yang salah** to go through only the wrong cards again. The home screen also has **🔁 Ulang Kad Salah**, which collects every wrong card from every deck. A card leaves the list when it is marked Betul.
+- Iqra cards are read by the phone's Arabic voice. Surah ayat play a real recitation by Syeikh Mahmud Khalil Al-Husary (from everyayah.com, needs internet), and use the phone's voice when offline.
+- Options: shuffle cards, slow voice. Progress is saved on the phone.
+
+Play it at `/iqra/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/iqra/
