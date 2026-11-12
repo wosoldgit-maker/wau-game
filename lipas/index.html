@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Full screen, behind the notch, no pinch-zoom -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Lipas Smash</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lipas Smash">
+<meta name="theme-color" content="#8b5a2b">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+
+<style>
+  /* Whole screen, no scrolling, no text selection, no tap flash */
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    background: #8b5a2b;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  /* Invisible helper to read the notch / home bar sizes */
+  #safe {
+    position: fixed; visibility: hidden; pointer-events: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="safe"></div>
+
+<script>
+// ---------- Setup ----------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let W = 0, H = 0, s = 1;          // screen size and scale
+let safeTop = 0, safeBottom = 0;  // notch and home bar
+let tableImage = null;            // the wooden table, drawn once and reused
+
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const safeStyle = getComputedStyle(document.getElementById("safe"));
+  safeTop = parseFloat(safeStyle.paddingTop) || 0;
+  safeBottom = parseFloat(safeStyle.paddingBottom) || 0;
+  s = Math.min(W / 400, H / 800);
+
+  tableImage = makeTable(dpr);
+}
+
+// ---------- The 5 kinds of cockroach ----------
+// size = body length, speed = pixels per second, hp = taps needed
+const SPECIES = [
+  { name: "German",      size: 26, speed: 95, hp: 1, points: 1, body: "#b5813f", head: "#d9a35f", mark: "stripes", from: 0 },
+  { name: "American",    size: 44, speed: 75, hp: 1, points: 2, body: "#7a3215", head: "#a8572b", mark: "ring",    from: 0 },
+  { name: "Brown-banded",size: 24, speed: 85, hp: 1, points: 3, body: "#8a5a2b", head: "#6b4220", mark: "bands",   from: 15, zigzag: true },
+  { name: "Oriental",    size: 36, speed: 55, hp: 2, points: 3, body: "#241510", head: "#3a2218", mark: "none",    from: 30 },
+  { name: "Hissing",     size: 62, speed: 38, hp: 3, points: 5, body: "#4a2a17", head: "#2e1a0e", mark: "segments",from: 45 }
+];
+
+// ---------- Best score ----------
+function loadBest() {
+  try { return Number(localStorage.getItem("lipasBest")) || 0; } catch (e) { return 0; }
+}
+function saveBest(v) {
+  try { localStorage.setItem("lipasBest", v); } catch (e) {}
+}
+
+// ---------- Game variables ----------
+let state = "start";     // "start", "play" or "over"
+let score = 0;
+let best = loadBest();
+let newBest = false;
+let chicken = 3;         // pieces of chicken left (your lives)
+let playTime = 0;        // seconds since the game started
+let time = 0;            // total time, for animations
+let overTime = 0;
+let spawnTimer = 0;      // counts down to the next cockroach
+let roaches = [];
+let splats = [];         // squashed marks on the table
+let popups = [];         // "+2" text that floats up
+let sprays = 0;          // spray cans you are holding
+let sprayCan = null;     // a can waiting on the table to be picked up
+let nextCanTime = 0;     // when the next can appears
+let mist = 0;            // spray cloud animation (1 = just sprayed, 0 = gone)
+let eatFlash = 0;        // red flash when a roach reaches the chicken
+
+function plate() {
+  return { x: W / 2, y: H * 0.5, r: 72 * s };
+}
+
+function sprayButton() {
+  const r = 38 * s;
+  return { x: W - r - 18 * s, y: H - safeBottom - r - 18 * s, r: r };
+}
+
+function resetGame() {
+  score = 0;
+  newBest = false;
+  chicken = 3;
+  playTime = 0;
+  spawnTimer = 0.8;
+  roaches = [];
+  splats = [];
+  popups = [];
+  sprays = 1;            // start with one spray
+  sprayCan = null;
+  nextCanTime = 15;
+  mist = 0;
+}
+
+// ---------- Making cockroaches ----------
+function spawnRoach() {
+  // Pick a species that is unlocked by now
+  const unlocked = SPECIES.filter(sp => playTime >= sp.from);
+  const sp = unlocked[Math.floor(Math.random() * unlocked.length)];
+
+  // Start just outside a random edge of the screen
+  const margin = 40 * s;
+  let x, y;
+  const edge = Math.floor(Math.random() * 4);
+  if (edge === 0) { x = Math.random() * W; y = -margin; }
+  else if (edge === 1) { x = W + margin; y = Math.random() * H; }
+  else if (edge === 2) { x = Math.random() * W; y = H + margin; }
+  else { x = -margin; y = Math.random() * H; }
+
+  // They get faster the longer you play
+  const faster = Math.min(1 + playTime * 0.012, 2.4);
+
+  roaches.push({
+    sp: sp,
+    x: x, y: y,
+    angle: 0,
+    hp: sp.hp,
+    speed: sp.speed * s * faster * (0.85 + Math.random() * 0.3),
+    wobble: Math.random() * 10,  // makes each one wiggle differently
+    hurt: 0                      // flashes white when tapped
+  });
+}
+
+// ---------- Controls ----------
+function onTap(x, y) {
+  if (state === "start") { resetGame(); state = "play"; return; }
+  if (state === "over") {
+    if (time - overTime > 0.8) { state = "start"; }
+    return;
+  }
+
+  // 1. Spray button
+  const b = sprayButton();
+  if (Math.hypot(x - b.x, y - b.y) < b.r + 6 * s) {
+    useSpray();
+    return;
+  }
+
+  // 2. Spray can lying on the table
+  if (sprayCan && Math.hypot(x - sprayCan.x, y - sprayCan.y) < 34 * s) {
+    sprays = Math.min(sprays + 1, 3);
+    popups.push({ x: sprayCan.x, y: sprayCan.y, text: "+1 spray", life: 1, colour: "#7cf0ff" });
+    sprayCan = null;
+    return;
+  }
+
+  // 3. The closest cockroach under your finger
+  let target = null, bestDist = Infinity;
+  for (const r of roaches) {
+    const d = Math.hypot(x - r.x, y - r.y);
+    const reach = r.sp.size * s * 0.6 + 16 * s; // a bit bigger than the bug, to be fair
+    if (d < reach && d < bestDist) { target = r; bestDist = d; }
+  }
+  if (target) hitRoach(target);
+}
+
+function hitRoach(r) {
+  r.hp--;
+  r.hurt = 0.15;
+  if (r.hp <= 0) killRoach(r);
+}
+
+function killRoach(r) {
+  roaches = roaches.filter(other => other !== r);
+  score += r.sp.points;
+  splats.push({ x: r.x, y: r.y, size: r.sp.size * s, colour: r.sp.body, life: 1, seed: Math.random() * 10 });
+  popups.push({ x: r.x, y: r.y, text: "+" + r.sp.points, life: 1, colour: "#ffe066" });
+}
+
+function useSpray() {
+  if (sprays <= 0) return;
+  sprays--;
+  mist = 1;
+  // Every cockroach on screen dies
+  for (const r of [...roaches]) killRoach(r);
+}
+
+canvas.addEventListener("pointerdown", function (e) {
+  e.preventDefault();
+  onTap(e.clientX, e.clientY);
+});
+// Stop iPhone zoom and scroll gestures
+document.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+document.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+document.addEventListener("gesturestart", e => e.preventDefault());
+document.addEventListener("dblclick", e => e.preventDefault());
+// Space bar sprays on a computer
+document.addEventListener("keydown", e => { if (e.code === "Space" && state === "play") useSpray(); });
+
+// ---------- Update (game rules) ----------
+function update(dt) {
+  time += dt;
+  mist = Math.max(0, mist - dt * 1.2);
+  eatFlash = Math.max(0, eatFlash - dt * 2);
+
+  // Splats and popups fade away
+  for (const sp of splats) sp.life -= dt * 0.25;
+  splats = splats.filter(sp => sp.life > 0);
+  for (const p of popups) { p.life -= dt * 1.5; p.y -= 40 * s * dt; }
+  popups = popups.filter(p => p.life > 0);
+
+  if (state !== "play") return;
+  playTime += dt;
+
+  // More cockroaches over time: the wait between them gets shorter
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    spawnRoach();
+    // After a while, sometimes two come at once
+    if (playTime > 40 && Math.random() < 0.3) spawnRoach();
+    spawnTimer = Math.max(0.3, 1.5 - playTime * 0.02);
+  }
+
+  // A spray can appears on the table now and then
+  if (!sprayCan && playTime > nextCanTime) {
+    const p = plate();
+    let x, y;
+    do {
+      x = 50 * s + Math.random() * (W - 100 * s);
+      y = safeTop + 90 * s + Math.random() * (H - safeTop - safeBottom - 200 * s);
+    } while (Math.hypot(x - p.x, y - p.y) < p.r + 50 * s); // not on the plate
+    sprayCan = { x: x, y: y, life: 6 };
+    nextCanTime = playTime + 18 + Math.random() * 10;
+  }
+  if (sprayCan) {
+    sprayCan.life -= dt;
+    if (sprayCan.life <= 0) sprayCan = null;
+  }
+
+  // Move every cockroach towards the chicken
+  const p = plate();
+  for (const r of roaches) {
+    r.hurt = Math.max(0, r.hurt - dt);
+    let aim = Math.atan2(p.y - r.y, p.x - r.x);
+    // Wiggle from side to side (the zigzag ones wiggle a lot)
+    const wiggle = r.sp.zigzag ? 0.9 : 0.35;
+    aim += Math.sin(time * 4 + r.wobble) * wiggle;
+    r.angle = aim;
+    r.x += Math.cos(aim) * r.speed * dt;
+    r.y += Math.sin(aim) * r.speed * dt;
+
+    // Reached the chicken? It eats one piece!
+    if (Math.hypot(p.x - r.x, p.y - r.y) < p.r * 0.6) {
+      r.ate = true;
+      chicken--;
+      eatFlash = 1;
+      popups.push({ x: p.x, y: p.y - p.r, text: "Chomp!", life: 1, colour: "#ff6b6b" });
+    }
+  }
+  roaches = roaches.filter(r => !r.ate);
+
+  if (chicken <= 0) {
+    state = "over";
+    overTime = time;
+    if (score > best) { best = score; newBest = true; saveBest(best); }
+  }
+}
+
+// ---------- Drawing ----------
+
+// Wooden table, drawn once into a hidden canvas (faster than every frame)
+function makeTable(dpr) {
+  const c = document.createElement("canvas");
+  c.width = canvas.width;
+  c.height = canvas.height;
+  const g = c.getContext("2d");
+  g.scale(dpr, dpr);
+  g.fillStyle = "#a0673a";
+  g.fillRect(0, 0, W, H);
+  // Planks
+  const plank = 80 * s;
+  for (let x = 0; x < W; x += plank) {
+    g.fillStyle = (x / plank) % 2 < 1 ? "#a86e3f" : "#9b6235";
+    g.fillRect(x, 0, plank, H);
+    g.fillStyle = "#6e4222";
+    g.fillRect(x, 0, 2 * s, H); // gap between planks
+    // Wood grain lines
+    g.strokeStyle = "rgba(90, 50, 20, 0.25)";
+    g.lineWidth = 1.5 * s;
+    for (let i = 0; i < 4; i++) {
+      g.beginPath();
+      const gx = x + 12 * s + i * 17 * s;
+      g.moveTo(gx, 0);
+      for (let y = 0; y <= H; y += 40) g.lineTo(gx + Math.sin(y * 0.01 + x + i) * 5 * s, y);
+      g.stroke();
+    }
+  }
+  return c;
+}
+
+function drawPlate() {
+  const p = plate();
+  // Plate shadow and rim
+  ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+  ctx.beginPath(); ctx.arc(p.x + 5 * s, p.y + 7 * s, p.r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f4f4f4";
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#cfd8e3";
+  ctx.lineWidth = 4 * s;
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.78, 0, Math.PI * 2); ctx.stroke();
+
+  // One drumstick for each life left
+  const spots = [[-22, -14, -0.6], [24, -10, 0.5], [0, 22, 2.2]];
+  for (let i = 0; i < chicken; i++) {
+    const [dx, dy, a] = spots[i];
+    drawDrumstick(p.x + dx * s, p.y + dy * s, a);
+  }
+}
+
+function drawDrumstick(x, y, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.scale(s, s);
+  // Bone
+  ctx.fillStyle = "#fff7e6";
+  ctx.fillRect(10, -3, 18, 6);
+  ctx.beginPath();
+  ctx.arc(29, -4, 4.5, 0, Math.PI * 2);
+  ctx.arc(29, 4, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Crispy meat
+  ctx.fillStyle = "#c97a1e";
+  ctx.beginPath();
+  ctx.ellipse(-2, 0, 20, 15, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#e39a35";
+  ctx.beginPath();
+  ctx.ellipse(-5, -4, 13, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Crunchy bits
+  ctx.fillStyle = "#9c5a12";
+  for (const [bx, by] of [[-12, 4], [-4, 8], [6, -6], [8, 5], [-15, -5], [0, 0]]) {
+    ctx.beginPath(); ctx.arc(bx, by, 1.8, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// A cockroach seen from above. It faces right before rotating.
+function drawRoach(r) {
+  const sp = r.sp;
+  const L = sp.size * s;        // body length
+  const Wd = L * 0.55;          // body width
+  ctx.save();
+  ctx.translate(r.x, r.y);
+  ctx.rotate(r.angle);
+
+  // Legs: 3 on each side, moving back and forth
+  ctx.strokeStyle = sp.head;
+  ctx.lineWidth = Math.max(1.2, L * 0.05);
+  ctx.lineCap = "round";
+  for (let i = 0; i < 3; i++) {
+    const legX = L * (0.15 - i * 0.2);
+    const swing = Math.sin(time * 25 + i * 2 + r.wobble) * L * 0.12;
+    for (const side of [-1, 1]) {
+      const step = side * (i % 2 === 0 ? swing : -swing);
+      ctx.beginPath();
+      ctx.moveTo(legX, side * Wd * 0.3);
+      ctx.lineTo(legX + step - L * 0.1, side * Wd * 0.75);
+      ctx.lineTo(legX + step - L * 0.25, side * Wd * 1.0);
+      ctx.stroke();
+    }
+  }
+
+  // Antennae: two long, waving feelers
+  ctx.lineWidth = Math.max(0.8, L * 0.025);
+  for (const side of [-1, 1]) {
+    const wave = Math.sin(time * 6 + r.wobble + side) * L * 0.15;
+    ctx.beginPath();
+    ctx.moveTo(L * 0.48, side * Wd * 0.1);
+    ctx.quadraticCurveTo(L * 0.85, side * Wd * 0.4 + wave, L * 1.15, side * Wd * 0.9 + wave);
+    ctx.stroke();
+  }
+
+  // Body (wings / abdomen)
+  ctx.fillStyle = r.hurt > 0 ? "#ffffff" : sp.body;
+  ctx.beginPath();
+  ctx.ellipse(-L * 0.1, 0, L * 0.42, Wd / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Markings that make each species look different
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.lineWidth = Math.max(1, L * 0.03);
+  if (sp.mark === "segments" || sp.mark === "none") {
+    // Body segments (Hissing) or a plain shiny shell (Oriental)
+    const count = sp.mark === "segments" ? 6 : 0;
+    for (let i = 1; i <= count; i++) {
+      const sx = -L * 0.5 + i * L * 0.11;
+      ctx.beginPath();
+      ctx.moveTo(sx, -Wd * 0.45);
+      ctx.quadraticCurveTo(sx + L * 0.04, 0, sx, Wd * 0.45);
+      ctx.stroke();
+    }
+  } else {
+    // A line down the middle where the wings meet
+    ctx.beginPath();
+    ctx.moveTo(L * 0.2, 0);
+    ctx.lineTo(-L * 0.5, 0);
+    ctx.stroke();
+  }
+  if (sp.mark === "bands") {
+    // Two pale bands across the back
+    ctx.strokeStyle = "rgba(240, 210, 150, 0.8)";
+    ctx.lineWidth = L * 0.07;
+    for (const bx of [-L * 0.05, -L * 0.28]) {
+      ctx.beginPath();
+      ctx.moveTo(bx, -Wd * 0.42);
+      ctx.lineTo(bx, Wd * 0.42);
+      ctx.stroke();
+    }
+  }
+  // Shiny highlight
+  ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+  ctx.beginPath();
+  ctx.ellipse(-L * 0.05, -Wd * 0.18, L * 0.25, Wd * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head shield (pronotum)
+  ctx.fillStyle = r.hurt > 0 ? "#ffffff" : sp.head;
+  ctx.beginPath();
+  ctx.ellipse(L * 0.33, 0, L * 0.16, Wd * 0.45, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (sp.mark === "stripes") {
+    // German cockroach: two dark stripes on the head shield
+    ctx.fillStyle = "#3b2410";
+    ctx.fillRect(L * 0.22, -Wd * 0.2, L * 0.22, Wd * 0.1);
+    ctx.fillRect(L * 0.22, Wd * 0.1, L * 0.22, Wd * 0.1);
+  }
+  if (sp.mark === "ring") {
+    // American cockroach: pale ring around the head shield
+    ctx.strokeStyle = "#e0b070";
+    ctx.lineWidth = L * 0.035;
+    ctx.beginPath();
+    ctx.ellipse(L * 0.33, 0, L * 0.12, Wd * 0.34, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Small head at the front
+  ctx.fillStyle = "#1a0f08";
+  ctx.beginPath();
+  ctx.ellipse(L * 0.48, 0, L * 0.06, Wd * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Little dots showing taps left (only for the tough ones)
+  if (sp.hp > 1) {
+    for (let i = 0; i < r.hp; i++) {
+      ctx.fillStyle = "#ff4d4d";
+      ctx.beginPath();
+      ctx.arc(r.x - (r.hp - 1) * 5 * s + i * 10 * s, r.y - L * 0.7, 3.5 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawSplat(sp) {
+  ctx.globalAlpha = Math.min(1, sp.life * 1.5);
+  ctx.fillStyle = sp.colour;
+  ctx.beginPath();
+  ctx.arc(sp.x, sp.y, sp.size * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  // Little drops around the middle
+  for (let i = 0; i < 7; i++) {
+    const a = sp.seed + i * 0.9;
+    const d = sp.size * (0.4 + (i % 3) * 0.15);
+    ctx.beginPath();
+    ctx.arc(sp.x + Math.cos(a) * d, sp.y + Math.sin(a) * d, sp.size * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// A plain bug-spray can (made up, not a real brand)
+function drawCan(c, x, y, size) {
+  c.save();
+  c.translate(x, y);
+  c.scale(size / 40, size / 40);
+  c.fillStyle = "#1f8a4c";               // green can
+  c.beginPath();
+  c.roundRect(-12, -16, 24, 34, 4);
+  c.fill();
+  c.fillStyle = "#ffd60a";               // yellow label
+  c.fillRect(-12, -4, 24, 12);
+  c.fillStyle = "#c0392b";               // red cross-out bug on the label
+  c.beginPath(); c.arc(0, 2, 4, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = "#c0392b"; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(-7, -3); c.lineTo(7, 7); c.stroke();
+  c.fillStyle = "#cfd8e3";               // silver top and nozzle
+  c.fillRect(-9, -22, 18, 6);
+  c.fillRect(-3, -27, 8, 5);
+  c.fillRect(5, -26, 5, 2);
+  c.restore();
+}
+
+function drawMist() {
+  if (mist <= 0) return;
+  ctx.fillStyle = "rgba(200, 255, 220, " + (mist * 0.55) + ")";
+  ctx.fillRect(0, 0, W, H);
+  // Big puffs spreading out from the button
+  const b = sprayButton();
+  const grow = (1 - mist) * Math.max(W, H) * 1.3;
+  ctx.fillStyle = "rgba(230, 255, 240, " + (mist * 0.6) + ")";
+  for (let i = 0; i < 8; i++) {
+    const a = Math.PI + i * 0.25;
+    ctx.beginPath();
+    ctx.arc(b.x + Math.cos(a) * grow * 0.6, b.y + Math.sin(a) * grow * 0.6, grow * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Text with a dark outline so it's easy to read
+function text(str, x, y, size, colour, align) {
+  ctx.font = "800 " + size + "px system-ui, -apple-system, sans-serif";
+  ctx.textAlign = align || "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = size / 6;
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#2b1406";
+  ctx.strokeText(str, x, y);
+  ctx.fillStyle = colour || "#ffffff";
+  ctx.fillText(str, x, y);
+}
+
+function drawHud() {
+  const top = safeTop + 30 * s;
+  text("Score " + score, 18 * s, top, 26 * s, "#ffffff", "left");
+  // Chicken lives as little drumstick icons
+  for (let i = 0; i < 3; i++) {
+    ctx.globalAlpha = i < chicken ? 1 : 0.25;
+    ctx.save();
+    ctx.translate(W - 30 * s - i * 40 * s, top);
+    ctx.scale(0.7, 0.7);
+    ctx.translate(-(W - 30 * s - i * 40 * s), -top);
+    drawDrumstick(W - 30 * s - i * 40 * s, top, -0.4);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // Spray button with how many cans you hold
+  const b = sprayButton();
+  ctx.fillStyle = sprays > 0 ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.4)";
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#2b1406"; ctx.lineWidth = 3 * s; ctx.stroke();
+  ctx.globalAlpha = sprays > 0 ? 1 : 0.4;
+  drawCan(ctx, b.x, b.y + 3 * s, 44 * s);
+  ctx.globalAlpha = 1;
+  text("x" + sprays, b.x - b.r + 2 * s, b.y - b.r + 6 * s, 20 * s, "#7cf0ff");
+}
+
+function drawScreens() {
+  const cx = W / 2;
+  if (state === "start") {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+    ctx.fillRect(0, 0, W, H);
+    text("Lipas Smash!", cx, H * 0.2 + safeTop / 2, 46 * s, "#ffe066");
+    text("Tap the cockroaches before", cx, H * 0.29, 19 * s);
+    text("they eat your fried chicken!", cx, H * 0.33, 19 * s);
+    // Show all 5 species
+    SPECIES.forEach(function (sp, i) {
+      const x = W * (0.12 + i * 0.19);
+      drawRoach({ sp: sp, x: x, y: H * 0.68, angle: -Math.PI / 2, hp: sp.hp, hurt: 0, wobble: i });
+      text(sp.name, x, H * 0.68 + 48 * s, 11 * s);
+    });
+    text("Tough ones need more taps.", cx, H * 0.79, 16 * s);
+    text("Grab the spray cans, then press the", cx, H * 0.83, 16 * s);
+    text("button to wipe out every cockroach!", cx, H * 0.86, 16 * s);
+    if (Math.floor(time * 2) % 2 === 0) text("Tap to start", cx, H * 0.93 - safeBottom, 30 * s);
+    if (best > 0) text("Best: " + best, cx, H * 0.4, 22 * s, "#ffe066");
+  }
+  if (state === "over") {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, 0, W, H);
+    text("The chicken is gone!", cx, H * 0.3, 34 * s, "#ff6b6b");
+    text("Score: " + score, cx, H * 0.42, 34 * s);
+    text("Best: " + best, cx, H * 0.5, 30 * s, "#ffe066");
+    if (newBest) text("New best!", cx, H * 0.57, 24 * s, "#7cf0ff");
+    if (time - overTime > 0.8) text("Tap to play again", cx, H * 0.7, 28 * s);
+  }
+}
+
+function draw() {
+  ctx.drawImage(tableImage, 0, 0, W, H);
+  for (const sp of splats) drawSplat(sp);
+  drawPlate();
+  if (sprayCan) {
+    // The can bobs and blinks when it is about to disappear
+    const blink = sprayCan.life < 2 && Math.floor(time * 8) % 2 === 0;
+    if (!blink) {
+      ctx.fillStyle = "rgba(124, 240, 255, 0.35)";
+      ctx.beginPath(); ctx.arc(sprayCan.x, sprayCan.y, 30 * s, 0, Math.PI * 2); ctx.fill();
+      drawCan(ctx, sprayCan.x, sprayCan.y + Math.sin(time * 5) * 3 * s, 46 * s);
+    }
+  }
+  for (const r of roaches) drawRoach(r);
+  drawMist();
+  if (eatFlash > 0) {
+    ctx.fillStyle = "rgba(255, 0, 0, " + eatFlash * 0.3 + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+  for (const p of popups) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    text(p.text, p.x, p.y, 22 * s, p.colour);
+    ctx.globalAlpha = 1;
+  }
+  if (state === "play") drawHud();
+  drawScreens();
+}
+
+// ---------- Main loop ----------
+let lastTime = 0;
+function loop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 1 / 30); // seconds since last frame
+  lastTime = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ---------- Home Screen icon (drawn with code) ----------
+function makeAppleIcon() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 180;
+  const g = c.getContext("2d");
+  g.fillStyle = "#a86e3f";
+  g.fillRect(0, 0, 180, 180);
+  drawIconContent(g);
+  document.getElementById("appleIcon").href = c.toDataURL("image/png");
+}
+function drawIconContent(g) {
+  // Simple roach silhouette and a drumstick
+  g.fillStyle = "#f4f4f4";
+  g.beginPath(); g.arc(90, 100, 60, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "#c97a1e";
+  g.beginPath(); g.ellipse(80, 110, 30, 22, -0.5, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "#fff7e6";
+  g.fillRect(100, 82, 26, 9);
+  g.fillStyle = "#7a3215";
+  g.beginPath(); g.ellipse(110, 55, 30, 17, -0.6, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = "#7a3215"; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(130, 40); g.quadraticCurveTo(150, 20, 170, 25); g.stroke();
+  g.beginPath(); g.moveTo(134, 45); g.quadraticCurveTo(160, 40, 175, 50); g.stroke();
+}
+
+// ---------- Start ----------
+window.addEventListener("resize", resize);
+resize();
+makeAppleIcon();
+requestAnimationFrame(function (now) { lastTime = now; loop(now); });
+</script>
+</body>
+</html>
