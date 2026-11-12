@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<!-- Full screen, behind the notch, no pinch-zoom -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Jom Baca Iqra</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jom Iqra">
+<meta name="theme-color" content="#1fa67a">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<!-- Clear Arabic font with good harakat (falls back to the phone's own font when offline) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;700&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --green: #1fa67a;
+    --green-dark: #137a58;
+    --sky: #e9f8f2;
+    --ink: #1d3b33;
+    --muted: #5d7a71;
+    --card: #fffdf6;
+    --right: #2fbf5f;
+    --wrong: #ef5a5a;
+    --gold: #ffc23d;
+    --top: env(safe-area-inset-top);
+    --bottom: env(safe-area-inset-bottom);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--sky);
+    color: var(--ink);
+    font-family: "Baloo 2", system-ui, -apple-system, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  body {
+    background:
+      radial-gradient(circle at 15% 10%, #c9f1e1 0 80px, transparent 81px),
+      radial-gradient(circle at 90% 30%, #fff1c9 0 60px, transparent 61px),
+      radial-gradient(circle at 20% 90%, #d7ecff 0 90px, transparent 91px),
+      var(--sky);
+    background-attachment: fixed;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .screen {
+    display: none;
+    min-height: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: calc(var(--top) + 14px) 16px calc(var(--bottom) + 18px);
+    flex-direction: column;
+  }
+  .screen.on { display: flex; }
+
+  /* ---------- Home ---------- */
+  .logo {
+    text-align: center;
+    margin: 6px 0 2px;
+  }
+  .logo .ar {
+    font-family: "Scheherazade New", "Geeza Pro", serif;
+    font-size: 54px;
+    line-height: 1.2;
+    color: var(--green-dark);
+    direction: rtl;
+  }
+  .logo h1 {
+    margin: -6px 0 0;
+    font-size: 30px;
+    font-weight: 800;
+  }
+  .logo p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  .notice {
+    background: #fff4d6;
+    border: 2px solid #ffd77a;
+    border-radius: 16px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.35;
+    margin: 12px 0 0;
+    display: none;
+  }
+  .notice.on { display: block; }
+
+  .revise-all {
+    margin-top: 14px;
+    background: var(--wrong);
+    color: #fff;
+    border-radius: 20px;
+    padding: 14px 16px;
+    font-size: 20px;
+    font-weight: 800;
+    box-shadow: 0 5px 0 #c43e3e;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .revise-all.on { display: flex; }
+  .revise-all:active { transform: translateY(4px); box-shadow: 0 1px 0 #c43e3e; }
+
+  .section-title {
+    margin: 20px 4px 8px;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--green-dark);
+  }
+  .decks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .deck {
+    position: relative;
+    background: #fff;
+    border-radius: 20px;
+    padding: 12px 12px 10px;
+    text-align: left;
+    box-shadow: 0 5px 0 rgba(0,0,0,.08);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 132px;
+    border-top: 8px solid var(--c, var(--green));
+  }
+  .deck:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.08); }
+  .deck .sample {
+    font-family: "Scheherazade New", "Geeza Pro", serif;
+    font-size: 30px;
+    line-height: 1.25;
+    direction: rtl;
+    text-align: right;
+    color: var(--c, var(--green));
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .deck .name { font-weight: 800; font-size: 18px; line-height: 1.1; }
+  .deck .desc { font-size: 13px; color: var(--muted); line-height: 1.2; }
+  .deck .stats {
+    margin-top: auto;
+    padding-top: 6px;
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .bar {
+    height: 8px;
+    background: #e9efed;
+    border-radius: 8px;
+    overflow: hidden;
+    flex: 1 1 100%;
+  }
+  .bar i { display: block; height: 100%; background: var(--right); border-radius: 8px; }
+  .pill-wrong {
+    background: #ffe3e3;
+    color: #c43e3e;
+    border-radius: 10px;
+    padding: 0 7px;
+  }
+  .pill-right { color: #1f8f47; }
+
+  .options {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .toggle {
+    background: #fff;
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 3px 0 rgba(0,0,0,.08);
+  }
+  .toggle.on { background: var(--green); color: #fff; }
+  .small-link {
+    margin: 14px auto 0;
+    background: none;
+    color: var(--muted);
+    font-size: 14px;
+    text-decoration: underline;
+  }
+
+  /* ---------- Card ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .round-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff;
+    font-size: 22px;
+    box-shadow: 0 3px 0 rgba(0,0,0,.1);
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+  .round-btn:active { transform: translateY(2px); box-shadow: none; }
+  .round-btn:disabled { opacity: .35; }
+  .top-info { flex: 1; min-width: 0; }
+  .top-info .t { font-weight: 800; font-size: 17px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-info .bar { margin-top: 5px; height: 10px; }
+  .top-info .bar i { background: var(--gold); transition: width .3s; }
+  .count { font-weight: 800; font-size: 16px; color: var(--muted); flex: none; }
+
+  .tally {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 10px 0 4px;
+    font-weight: 800;
+    font-size: 17px;
+  }
+  .tally .r { color: #1f8f47; }
+  .tally .w { color: #c43e3e; }
+
+  .flash {
+    flex: 1;
+    margin: 6px 0 14px;
+    background: var(--card);
+    border-radius: 28px;
+    box-shadow: 0 8px 0 rgba(0,0,0,.08), inset 0 0 0 4px #f1e7c8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 16px;
+    min-height: 300px;
+    position: relative;
+    transition: box-shadow .2s, background .2s;
+  }
+  .flash.right { background: #ecfbef; box-shadow: 0 8px 0 rgba(0,0,0,.08), inset 0 0 0 5px var(--right); }
+  .flash.wrong { background: #fff0f0; box-shadow: 0 8px 0 rgba(0,0,0,.08), inset 0 0 0 5px var(--wrong); }
+  .flash.pop { animation: pop .35s ease-out; }
+  @keyframes pop {
+    0% { transform: scale(.9) rotate(-2deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .tag {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    background: #f3eedc;
+    border-radius: 10px;
+    padding: 1px 9px;
+  }
+  .arabic {
+    font-family: "Scheherazade New", "Geeza Pro", "Noto Naskh Arabic", serif;
+    direction: rtl;
+    text-align: center;
+    line-height: 1.9;
+    color: var(--ink);
+    word-spacing: .08em;
+  }
+  .arabic.s1 { font-size: 150px; line-height: 1.5; }
+  .arabic.s2 { font-size: 92px; line-height: 1.6; }
+  .arabic.s3 { font-size: 62px; }
+  .arabic.s4 { font-size: 44px; }
+  .arabic.s5 { font-size: 34px; }
+  @media (max-width: 380px) {
+    .arabic.s1 { font-size: 128px; }
+    .arabic.s2 { font-size: 78px; }
+    .arabic.s3 { font-size: 52px; }
+    .arabic.s4 { font-size: 38px; }
+    .arabic.s5 { font-size: 29px; }
+  }
+  .rumi {
+    margin-top: 8px;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--green-dark);
+    text-align: center;
+    min-height: 40px;
+    visibility: hidden;
+  }
+  .rumi.on { visibility: visible; animation: pop .3s ease-out; }
+  .meaning {
+    font-size: 15px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 2px;
+    visibility: hidden;
+  }
+  .meaning.on { visibility: visible; }
+  .hint {
+    font-size: 16px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .listen {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff;
+    font-size: 22px;
+    box-shadow: 0 3px 0 rgba(0,0,0,.1);
+    display: none;
+  }
+  .listen.on { display: grid; place-items: center; }
+  .listen.playing { animation: pulse .8s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.12); } }
+
+  .actions { display: flex; gap: 12px; }
+  .big {
+    flex: 1;
+    border-radius: 22px;
+    padding: 16px 10px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.05;
+  }
+  .big small { font-size: 14px; font-weight: 600; opacity: .9; }
+  .big:active { transform: translateY(5px); }
+  .check { background: #3b82f6; box-shadow: 0 6px 0 #2a5fc0; }
+  .check:active { box-shadow: 0 1px 0 #2a5fc0; }
+  .btn-wrong { background: var(--wrong); box-shadow: 0 6px 0 #c43e3e; }
+  .btn-wrong:active { box-shadow: 0 1px 0 #c43e3e; }
+  .btn-right { background: var(--right); box-shadow: 0 6px 0 #1f8f47; }
+  .btn-right:active { box-shadow: 0 1px 0 #1f8f47; }
+  .hidden { display: none !important; }
+
+  .cheer {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    font-weight: 800;
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+    text-shadow: 0 3px 0 #fff, 0 -3px 0 #fff, 3px 0 0 #fff, -3px 0 0 #fff;
+    z-index: 5;
+  }
+  .cheer.go { animation: cheer 0.9s ease-out; }
+  @keyframes cheer {
+    0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); }
+    25% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    70% { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -80%) scale(1); }
+  }
+
+  /* ---------- Results ---------- */
+  .result-box {
+    background: #fff;
+    border-radius: 28px;
+    padding: 22px 16px;
+    text-align: center;
+    margin-top: 20px;
+    box-shadow: 0 8px 0 rgba(0,0,0,.08);
+  }
+  .stars { font-size: 54px; letter-spacing: 6px; }
+  .result-box h2 { margin: 6px 0 0; font-size: 30px; }
+  .result-box .score { font-size: 20px; color: var(--muted); font-weight: 700; }
+  .wrong-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 14px;
+    direction: rtl;
+  }
+  .chip {
+    background: #ffe3e3;
+    border-radius: 14px;
+    padding: 2px 12px;
+    font-family: "Scheherazade New", "Geeza Pro", serif;
+    font-size: 30px;
+    line-height: 1.5;
+    color: #8c2a2a;
+    max-width: 100%;
+  }
+  .chip:active { transform: scale(.95); }
+  .wrong-note { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .result-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .wide {
+    border-radius: 20px;
+    padding: 14px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .wide:active { transform: translateY(4px); }
+  .wide.red { background: var(--wrong); box-shadow: 0 5px 0 #c43e3e; }
+  .wide.green { background: var(--green); box-shadow: 0 5px 0 var(--green-dark); }
+  .wide.white { background: #fff; color: var(--ink); box-shadow: 0 5px 0 rgba(0,0,0,.1); }
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section class="screen on" id="home">
+  <div class="logo">
+    <div class="ar">اِقْرَأْ</div>
+    <h1>Jom Baca Iqra</h1>
+    <p>Baca, semak, dan ulang sampai pandai!</p>
+  </div>
+
+  <div class="notice" id="voiceNotice"></div>
+
+  <button class="revise-all" id="reviseAllBtn">🔁 Ulang Kad Salah <span id="reviseAllCount"></span></button>
+
+  <div class="section-title">📘 Buku Iqra</div>
+  <div class="decks" id="iqraDecks"></div>
+
+  <div class="section-title">📗 Surah Pendek Al-Quran</div>
+  <div class="decks" id="quranDecks"></div>
+
+  <div class="options">
+    <button class="toggle" id="shuffleBtn">🔀 Kocok kad</button>
+    <button class="toggle" id="slowBtn">🐢 Suara perlahan</button>
+  </div>
+  <button class="small-link" id="resetBtn">Padam semua markah</button>
+</section>
+
+<!-- ================= CARD ================= -->
+<section class="screen" id="play">
+  <div class="topbar">
+    <button class="round-btn" id="homeBtn" aria-label="Menu">🏠</button>
+    <div class="top-info">
+      <div class="t" id="deckTitle"></div>
+      <div class="bar"><i id="progressFill"></i></div>
+    </div>
+    <div class="count" id="countText"></div>
+  </div>
+
+  <div class="tally">
+    <span class="r">✅ <span id="tallyRight">0</span></span>
+    <span class="w">❌ <span id="tallyWrong">0</span></span>
+  </div>
+
+  <div class="flash" id="flash">
+    <span class="tag" id="cardTag"></span>
+    <button class="listen" id="listenBtn" aria-label="Dengar lagi">🔊</button>
+    <div class="arabic" id="arabic"></div>
+    <div class="rumi" id="rumi"></div>
+    <div class="meaning" id="meaning"></div>
+    <div class="hint" id="hint">Cuba baca dulu, kemudian tekan Semak 👇</div>
+  </div>
+
+  <div class="actions" id="checkRow">
+    <button class="round-btn" id="prevBtn" aria-label="Kad sebelum" style="width:62px;height:auto;border-radius:22px">◀</button>
+    <button class="big check" id="checkBtn">🔊 Semak<small>Dengar bacaan betul</small></button>
+  </div>
+  <div class="actions hidden" id="markRow">
+    <button class="big btn-wrong" id="wrongBtn">❌ Salah<small>Nak ulang lagi</small></button>
+    <button class="big btn-right" id="rightBtn">✅ Betul<small>Saya pandai!</small></button>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section class="screen" id="results">
+  <div class="result-box">
+    <div class="stars" id="stars"></div>
+    <h2 id="resultTitle"></h2>
+    <div class="score" id="resultScore"></div>
+    <div class="wrong-list" id="wrongList"></div>
+    <div class="wrong-note" id="wrongNote"></div>
+  </div>
+  <div class="result-actions">
+    <button class="wide red" id="reviseBtn">🔁 Ulang yang salah</button>
+    <button class="wide green" id="againBtn">🔄 Main semula</button>
+    <button class="wide white" id="menuBtn">🏠 Menu utama</button>
+  </div>
+</section>
+
+<div class="cheer" id="cheer"></div>
+
+<script>
+// =====================================================================
+//  CONTENT
+//  Each card: [arabic, rumi, meaning?]
+//  Iqra cards are spoken by the phone's Arabic voice.
+//  Quran cards play a real qari recitation (Syeikh Mahmud Khalil Al-Husary)
+//  and fall back to the phone's Arabic voice when offline.
+// =====================================================================
+const DECKS = [
+  {
+    id: "iqra1", group: "iqra", name: "Iqra 1", color: "#1fa67a",
+    desc: "Huruf berbaris atas", sample: "أَ بَ تَ",
+    cards: [
+      ["أَ", "a"], ["بَ", "ba"], ["تَ", "ta"], ["ثَ", "tsa"], ["جَ", "ja"],
+      ["حَ", "ḥa"], ["خَ", "kho"], ["دَ", "da"], ["ذَ", "dza"], ["رَ", "ro"],
+      ["زَ", "za"], ["سَ", "sa"], ["شَ", "sya"], ["صَ", "sho"], ["ضَ", "dho"],
+      ["طَ", "tho"], ["ظَ", "zho"], ["عَ", "'a"], ["غَ", "gho"], ["فَ", "fa"],
+      ["قَ", "qo"], ["كَ", "ka"], ["لَ", "la"], ["مَ", "ma"], ["نَ", "na"],
+      ["وَ", "wa"], ["هَ", "ha"], ["يَ", "ya"],
+    ],
+  },
+  {
+    id: "iqra1b", group: "iqra", name: "Iqra 1 (Sambung)", color: "#14967a",
+    desc: "Huruf bersambung, baris atas", sample: "كَتَبَ",
+    cards: [
+      ["كَتَبَ", "ka-ta-ba", "dia menulis"], ["جَلَسَ", "ja-la-sa", "dia duduk"],
+      ["ذَهَبَ", "dza-ha-ba", "dia pergi"], ["فَتَحَ", "fa-ta-ḥa", "dia membuka"],
+      ["خَلَقَ", "kho-la-qo", "Dia mencipta"], ["نَصَرَ", "na-sho-ro", "dia menolong"],
+      ["أَمَرَ", "a-ma-ro", "dia menyuruh"], ["وَجَدَ", "wa-ja-da", "dia menjumpai"],
+      ["صَدَقَ", "sho-da-qo", "dia benar"], ["رَزَقَ", "ro-za-qo", "Dia memberi rezeki"],
+      ["غَفَرَ", "gho-fa-ro", "Dia mengampun"], ["ظَلَمَ", "zho-la-ma", "dia menzalimi"],
+    ],
+  },
+  {
+    id: "iqra2", group: "iqra", name: "Iqra 2", color: "#3b82f6",
+    desc: "Mad: panjang 2 harakat", sample: "قَالَ",
+    cards: [
+      ["بَا", "baa"], ["تَا", "taa"], ["سَا", "saa"], ["مَا", "maa"], ["لَا", "laa"],
+      ["قَالَ", "qoo-la", "dia berkata"], ["كَانَ", "kaa-na", "dia adalah"],
+      ["نَامَ", "naa-ma", "dia tidur"], ["قَامَ", "qoo-ma", "dia berdiri"],
+      ["خَافَ", "khoo-fa", "dia takut"], ["زَادَ", "zaa-da", "dia menambah"],
+      ["تَابَ", "taa-ba", "dia bertaubat"], ["صَارَ", "shoo-ro", "dia menjadi"],
+    ],
+  },
+  {
+    id: "iqra3", group: "iqra", name: "Iqra 3", color: "#8b5cf6",
+    desc: "Baris bawah & baris depan", sample: "بِ بُ",
+    cards: [
+      ["بِ", "bi"], ["تِ", "ti"], ["مِ", "mi"], ["سِ", "si"], ["لِ", "li"],
+      ["بُ", "bu"], ["تُ", "tu"], ["مُ", "mu"], ["نُ", "nu"], ["كُ", "ku"],
+      ["فِي", "fii"], ["نُو", "nuu"],
+      ["سَمِعَ", "sa-mi-'a", "dia mendengar"], ["عَلِمَ", "'a-li-ma", "dia mengetahui"],
+      ["كُتِبَ", "ku-ti-ba", "telah ditulis"], ["قِيلَ", "qii-la", "dikatakan"],
+      ["نُورٌ", "nuu-run", "cahaya"], ["يَقُولُ", "ya-quu-lu", "dia berkata"],
+    ],
+  },
+  {
+    id: "iqra4", group: "iqra", name: "Iqra 4", color: "#f97316",
+    desc: "Tanwin & sukun (mati)", sample: "بً مِنْ",
+    cards: [
+      ["بً", "ban"], ["بٍ", "bin"], ["بٌ", "bun"],
+      ["أَحَدٌ", "a-ḥa-dun", "satu / Esa"], ["كِتَابًا", "ki-taa-ban", "sebuah kitab"],
+      ["مِنْ", "min", "dari"], ["عَنْ", "'an", "tentang"], ["قُلْ", "qul", "katakanlah"],
+      ["لَمْ", "lam", "tidak"], ["كُنْ", "kun", "jadilah"], ["قَدْ", "qod", "sungguh"],
+      ["يَلِدْ", "ya-lid", "beranak"], ["أَنْتُمْ", "an-tum", "kamu semua"],
+    ],
+  },
+  {
+    id: "iqra5", group: "iqra", name: "Iqra 5", color: "#e11d74",
+    desc: "Alif lam & sabdu", sample: "اَلْحَمْدُ",
+    cards: [
+      ["اَلْحَمْدُ", "al-ḥam-du", "segala puji"], ["اَلْقَمَرُ", "al-qo-ma-ru", "bulan"],
+      ["اَلْكِتَابُ", "al-ki-taa-bu", "kitab"], ["اَلشَّمْسُ", "asy-syam-su", "matahari"],
+      ["اَلنَّاسُ", "an-naa-su", "manusia"], ["اَلرَّحْمٰنُ", "ar-roḥ-maa-nu", "Yang Maha Pemurah"],
+      ["إِنَّ", "in-na", "sesungguhnya"], ["رَبُّ", "rob-bu", "Tuhan"],
+      ["ثُمَّ", "tsum-ma", "kemudian"], ["اَللّٰهُ", "Allaa-hu", "Allah"],
+    ],
+  },
+
+  // ---------- Quran: one card per ayat ----------
+  {
+    id: "fatihah", group: "quran", name: "Al-Fatihah", color: "#0e8f6f",
+    desc: "Surah ke-1 · 7 ayat", sample: "اَلْحَمْدُ لِلّٰهِ", surah: 1,
+    cards: [
+      ["بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ", "Bismillaahir roḥmaanir roḥiim"],
+      ["اَلْحَمْدُ لِلّٰهِ رَبِّ الْعٰلَمِيْنَ", "Alḥamdu lillaahi robbil 'aalamiin"],
+      ["الرَّحْمٰنِ الرَّحِيْمِ", "Ar-roḥmaanir roḥiim"],
+      ["مٰلِكِ يَوْمِ الدِّيْنِ", "Maaliki yawmid diin"],
+      ["اِيَّاكَ نَعْبُدُ وَاِيَّاكَ نَسْتَعِيْنُ", "Iyyaaka na'budu wa iyyaaka nasta'iin"],
+      ["اِهْدِنَا الصِّرَاطَ الْمُسْتَقِيْمَ", "Ihdinash shiroothol mustaqiim"],
+      ["صِرَاطَ الَّذِيْنَ اَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوْبِ عَلَيْهِمْ وَلَا الضَّالِّيْنَ",
+       "Shiroothol ladziina an'amta 'alaihim ghoiril maghdhuubi 'alaihim wa ladh dhoolliin"],
+    ],
+  },
+  {
+    id: "ikhlas", group: "quran", name: "Al-Ikhlas", color: "#0f766e",
+    desc: "Surah ke-112 · 4 ayat", sample: "قُلْ هُوَ اللّٰهُ", surah: 112,
+    cards: [
+      ["قُلْ هُوَ اللّٰهُ اَحَدٌ", "Qul huwallaahu aḥad"],
+      ["اَللّٰهُ الصَّمَدُ", "Allaahush shomad"],
+      ["لَمْ يَلِدْ وَلَمْ يُوْلَدْ", "Lam yalid wa lam yuulad"],
+      ["وَلَمْ يَكُنْ لَّهٗ كُفُوًا اَحَدٌ", "Wa lam yakul lahuu kufuwan aḥad"],
+    ],
+  },
+  {
+    id: "falaq", group: "quran", name: "Al-Falaq", color: "#2563eb",
+    desc: "Surah ke-113 · 5 ayat", sample: "قُلْ اَعُوْذُ", surah: 113,
+    cards: [
+      ["قُلْ اَعُوْذُ بِرَبِّ الْفَلَقِ", "Qul a'uudzu birobbil falaq"],
+      ["مِنْ شَرِّ مَا خَلَقَ", "Min syarri maa kholaq"],
+      ["وَمِنْ شَرِّ غَاسِقٍ اِذَا وَقَبَ", "Wa min syarri ghoosiqin idzaa waqob"],
+      ["وَمِنْ شَرِّ النَّفّٰثٰتِ فِى الْعُقَدِ", "Wa min syarrin naffaatsaati fil 'uqod"],
+      ["وَمِنْ شَرِّ حَاسِدٍ اِذَا حَسَدَ", "Wa min syarri ḥaasidin idzaa ḥasad"],
+    ],
+  },
+  {
+    id: "nas", group: "quran", name: "An-Nas", color: "#7c3aed",
+    desc: "Surah ke-114 · 6 ayat", sample: "مَلِكِ النَّاسِ", surah: 114,
+    cards: [
+      ["قُلْ اَعُوْذُ بِرَبِّ النَّاسِ", "Qul a'uudzu birobbin naas"],
+      ["مَلِكِ النَّاسِ", "Malikin naas"],
+      ["اِلٰهِ النَّاسِ", "Ilaahin naas"],
+      ["مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ", "Min syarril waswaasil khonnaas"],
+      ["الَّذِيْ يُوَسْوِسُ فِيْ صُدُوْرِ النَّاسِ", "Alladzii yuwaswisu fii shuduurin naas"],
+      ["مِنَ الْجِنَّةِ وَالنَّاسِ", "Minal jinnati wan naas"],
+    ],
+  },
+  {
+    id: "kauthar", group: "quran", name: "Al-Kauthar", color: "#db2777",
+    desc: "Surah ke-108 · 3 ayat", sample: "اِنَّا اَعْطَيْنٰكَ", surah: 108,
+    cards: [
+      ["اِنَّا اَعْطَيْنٰكَ الْكَوْثَرَ", "Innaa a'thoinaakal kautsar"],
+      ["فَصَلِّ لِرَبِّكَ وَانْحَرْ", "Fasholli lirobbika wanḥar"],
+      ["اِنَّ شَانِئَكَ هُوَ الْاَبْتَرُ", "Inna syaani-aka huwal abtar"],
+    ],
+  },
+];
+
+// Qari recitation, one MP3 per ayat (e.g. 112001.mp3 = Surah 112, ayat 1)
+const RECITER_URL = "https://everyayah.com/data/Husary_128kbps/";
+
+// Give every card an id like "iqra3-5", and a link back to its deck
+DECKS.forEach(function (deck) {
+  deck.cards = deck.cards.map(function (c, i) {
+    return {
+      id: deck.id + "-" + i,
+      deck: deck,
+      index: i,
+      ar: c[0],
+      rumi: c[1],
+      meaning: c[2] || "",
+    };
+  });
+});
+const CARD_BY_ID = {};
+DECKS.forEach(function (d) { d.cards.forEach(function (c) { CARD_BY_ID[c.id] = c; }); });
+
+// =====================================================================
+//  SAVED PROGRESS (kept on this phone)
+//  last[cardId] = "r" or "w"  — the latest answer for that card
+//  wrong[cardId] = true       — cards still waiting to be revised
+// =====================================================================
+const SAVE_KEY = "jomIqraSave1";
+let save = { last: {}, wrong: {}, shuffle: false, slow: true };
+try {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw) save = Object.assign(save, JSON.parse(raw));
+} catch (e) { /* private mode: progress just won't be kept */ }
+function store() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+}
+
+// =====================================================================
+//  VOICE
+// =====================================================================
+let arabicVoice = null;
+function pickVoice() {
+  if (!("speechSynthesis" in window)) return;
+  const voices = speechSynthesis.getVoices();
+  const ar = voices.filter(function (v) { return /^ar/i.test(v.lang); });
+  // Prefer Saudi Arabic, then any Arabic voice
+  arabicVoice = ar.find(function (v) { return /SA/i.test(v.lang); }) || ar[0] || null;
+  updateVoiceNotice();
+}
+if ("speechSynthesis" in window) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+// Make the text easier for the phone's voice to read:
+// swap Quran-style marks for plain spelling that means the same sound.
+function speakable(text) {
+  return text
+    .replace(/اَللّٰهُ/g, "اللهُ")
+    .replace(/لِلّٰهِ/g, "لِلَّهِ")
+    .replace(/اللّٰه/g, "الله")
+    .replace(/ٱ/g, "ا")        // alif wasla -> alif
+    .replace(/ٰ/g, "ا")        // small (dagger) alif -> alif
+    .replace(/ٗ/g, "ُ");       // small inverted damma -> damma
+}
+
+let currentAudio = null;
+function stopSound() {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  listenBtn.classList.remove("playing");
+}
+
+function speakTTS(text) {
+  if (!("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance(speakable(text));
+  u.lang = arabicVoice ? arabicVoice.lang : "ar-SA";
+  if (arabicVoice) u.voice = arabicVoice;
+  u.rate = save.slow ? 0.6 : 0.9;
+  u.onend = u.onerror = function () { listenBtn.classList.remove("playing"); };
+  listenBtn.classList.add("playing");
+  speechSynthesis.speak(u);
+}
+
+function playCard(card) {
+  stopSound();
+  const deck = card.deck;
+  if (deck.surah) {
+    // Real recitation for Quran ayat
+    const file = String(deck.surah).padStart(3, "0") + String(card.index + 1).padStart(3, "0") + ".mp3";
+    const audio = new Audio(RECITER_URL + file);
+    audio.playbackRate = save.slow ? 0.85 : 1;
+    currentAudio = audio;
+    listenBtn.classList.add("playing");
+    let fellBack = false;
+    function fallback() {
+      if (fellBack || currentAudio !== audio) return;
+      fellBack = true;
+      currentAudio = null;
+      speakTTS(card.ar);
+    }
+    audio.onended = function () { listenBtn.classList.remove("playing"); };
+    audio.onerror = fallback;
+    const p = audio.play();
+    if (p && p.catch) p.catch(fallback);
+  } else {
+    speakTTS(card.ar);
+  }
+}
+
+function updateVoiceNotice() {
+  const n = document.getElementById("voiceNotice");
+  if (!("speechSynthesis" in window)) {
+    n.innerHTML = "⚠️ Pelayar ini tidak boleh bercakap. Cuba buka dalam Safari atau Chrome.";
+    n.classList.add("on");
+  } else if (!arabicVoice && speechSynthesis.getVoices().length > 0) {
+    n.innerHTML = "⚠️ Suara Bahasa Arab tidak dijumpai pada peranti ini. " +
+      "Di iPhone: <b>Settings → Accessibility → Spoken Content → Voices → Arabic</b>, muat turun satu suara. " +
+      "Surah Al-Quran masih boleh didengar (perlu internet).";
+    n.classList.add("on");
+  } else {
+    n.classList.remove("on");
+  }
+}
+
+// Little happy / sad sounds
+let audioCtx = null;
+function blip(good) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = good ? [660, 880, 1100] : [330, 260];
+    notes.forEach(function (f, i) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = good ? "triangle" : "sine";
+      o.frequency.value = f;
+      const t = audioCtx.currentTime + i * 0.09;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(t);
+      o.stop(t + 0.22);
+    });
+  } catch (e) {}
+}
+
+// =====================================================================
+//  SCREENS
+// =====================================================================
+const $ = function (id) { return document.getElementById(id); };
+const listenBtn = $("listenBtn");
+function show(id) {
+  document.querySelectorAll(".screen").forEach(function (s) { s.classList.toggle("on", s.id === id); });
+  window.scrollTo(0, 0);
+}
+
+function wrongCards(deck) {
+  const list = deck ? deck.cards : Object.values(CARD_BY_ID);
+  return list.filter(function (c) { return save.wrong[c.id]; });
+}
+
+// ---------- Home ----------
+function renderHome() {
+  ["iqra", "quran"].forEach(function (group) {
+    const box = $(group === "iqra" ? "iqraDecks" : "quranDecks");
+    box.innerHTML = "";
+    DECKS.filter(function (d) { return d.group === group; }).forEach(function (deck) {
+      const total = deck.cards.length;
+      const right = deck.cards.filter(function (c) { return save.last[c.id] === "r"; }).length;
+      const wrong = wrongCards(deck).length;
+      const b = document.createElement("button");
+      b.className = "deck";
+      b.style.setProperty("--c", deck.color);
+      b.innerHTML =
+        '<div class="sample">' + deck.sample + "</div>" +
+        '<div class="name">' + deck.name + "</div>" +
+        '<div class="desc">' + deck.desc + "</div>" +
+        '<div class="stats">' +
+          '<div class="bar"><i style="width:' + Math.round((right / total) * 100) + '%"></i></div>' +
+          '<span class="pill-right">✅ ' + right + "/" + total + "</span>" +
+          (wrong ? '<span class="pill-wrong">❌ ' + wrong + "</span>" : "") +
+        "</div>";
+      b.onclick = function () { startSession(deck.cards, deck.name, deck); };
+      box.appendChild(b);
+    });
+  });
+
+  const allWrong = wrongCards();
+  $("reviseAllBtn").classList.toggle("on", allWrong.length > 0);
+  $("reviseAllCount").textContent = "(" + allWrong.length + ")";
+  $("shuffleBtn").classList.toggle("on", save.shuffle);
+  $("slowBtn").classList.toggle("on", save.slow);
+  updateVoiceNotice();
+}
+
+$("reviseAllBtn").onclick = function () {
+  startSession(wrongCards(), "🔁 Ulang Kad Salah", null, true);
+};
+$("shuffleBtn").onclick = function () { save.shuffle = !save.shuffle; store(); renderHome(); };
+$("slowBtn").onclick = function () { save.slow = !save.slow; store(); renderHome(); };
+$("resetBtn").onclick = function () {
+  if (confirm("Padam semua markah dan senarai kad salah?")) {
+    save.last = {};
+    save.wrong = {};
+    store();
+    renderHome();
+  }
+};
+
+// ---------- Playing ----------
+let session = null;
+
+function shuffled(list) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function startSession(cards, title, deck, revise) {
+  if (!cards.length) return;
+  // Quran ayat stay in order (unless revising); Iqra cards can be shuffled
+  const keepOrder = deck && deck.group === "quran";
+  session = {
+    cards: save.shuffle && !keepOrder ? shuffled(cards) : cards.slice(),
+    original: cards.slice(),
+    title: title,
+    deck: deck,
+    revise: !!revise,
+    pos: 0,
+    answers: [],   // answers[i] = "r" | "w" for this session
+  };
+  show("play");
+  renderCard();
+}
+
+function sizeClass(text) {
+  const n = text.replace(/[ً-ٰٟ\s]/g, "").length;   // letters only
+  if (n <= 1) return "s1";
+  if (n <= 4) return "s2";
+  if (n <= 9) return "s3";
+  if (n <= 22) return "s4";
+  return "s5";
+}
+
+function renderCard() {
+  stopSound();
+  const s = session;
+  const card = s.cards[s.pos];
+  const total = s.cards.length;
+  $("deckTitle").textContent = s.title;
+  $("countText").textContent = (s.pos + 1) + " / " + total;
+  $("progressFill").style.width = (s.pos / total) * 100 + "%";
+  $("tallyRight").textContent = s.answers.filter(function (a) { return a === "r"; }).length;
+  $("tallyWrong").textContent = s.answers.filter(function (a) { return a === "w"; }).length;
+
+  const flash = $("flash");
+  flash.className = "flash";
+  void flash.offsetWidth;          // restart the pop animation
+  flash.classList.add("pop");
+
+  $("cardTag").textContent = card.deck.surah
+    ? card.deck.name + " · Ayat " + (card.index + 1)
+    : card.deck.name;
+  const ar = $("arabic");
+  ar.textContent = card.ar;
+  ar.className = "arabic " + sizeClass(card.ar);
+  $("rumi").textContent = card.rumi;
+  $("rumi").className = "rumi";
+  $("meaning").textContent = card.meaning;
+  $("meaning").className = "meaning";
+  $("hint").classList.remove("hidden");
+  listenBtn.classList.remove("on");
+  $("checkRow").classList.remove("hidden");
+  $("markRow").classList.add("hidden");
+  $("prevBtn").disabled = s.pos === 0;
+}
+
+function reveal() {
+  const card = session.cards[session.pos];
+  $("rumi").classList.add("on");
+  $("meaning").classList.add("on");
+  $("hint").classList.add("hidden");
+  listenBtn.classList.add("on");
+  $("checkRow").classList.add("hidden");
+  $("markRow").classList.remove("hidden");
+  playCard(card);
+}
+
+const CHEERS_RIGHT = ["Bagus! 🌟", "Pandai! 👏", "Hebat! 🎉", "Masya-Allah! ✨", "Syabas! 🏆"];
+const CHEERS_WRONG = ["Tak apa! 💪", "Cuba lagi nanti 🙂", "Jom ulang! 🔁"];
+function cheer(good) {
+  const el = $("cheer");
+  const list = good ? CHEERS_RIGHT : CHEERS_WRONG;
+  el.textContent = list[Math.floor(Math.random() * list.length)];
+  el.style.color = good ? "#1f8f47" : "#c43e3e";
+  el.classList.remove("go");
+  void el.offsetWidth;
+  el.classList.add("go");
+}
+
+function mark(good) {
+  const s = session;
+  const card = s.cards[s.pos];
+  s.answers[s.pos] = good ? "r" : "w";
+  save.last[card.id] = good ? "r" : "w";
+  if (good) delete save.wrong[card.id];
+  else save.wrong[card.id] = true;
+  store();
+
+  blip(good);
+  cheer(good);
+  $("flash").classList.add(good ? "right" : "wrong");
+  $("markRow").classList.add("hidden");
+
+  setTimeout(function () {
+    if (session !== s) return;
+    s.pos++;
+    if (s.pos >= s.cards.length) showResults();
+    else renderCard();
+  }, 650);
+}
+
+$("checkBtn").onclick = reveal;
+listenBtn.onclick = function () { playCard(session.cards[session.pos]); };
+$("rightBtn").onclick = function () { mark(true); };
+$("wrongBtn").onclick = function () { mark(false); };
+$("prevBtn").onclick = function () {
+  if (session.pos > 0) { session.pos--; renderCard(); }
+};
+$("homeBtn").onclick = function () {
+  stopSound();
+  session = null;
+  renderHome();
+  show("home");
+};
+
+// ---------- Results ----------
+function showResults() {
+  stopSound();
+  const s = session;
+  const total = s.cards.length;
+  const right = s.answers.filter(function (a) { return a === "r"; }).length;
+  const missed = s.cards.filter(function (c, i) { return s.answers[i] === "w"; });
+  const ratio = right / total;
+  const stars = ratio === 1 ? 3 : ratio >= 0.7 ? 2 : ratio >= 0.4 ? 1 : 0;
+  $("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  $("resultTitle").textContent =
+    ratio === 1 ? "Semua betul! 🎉" : ratio >= 0.7 ? "Bagus sekali!" : ratio >= 0.4 ? "Bagus, teruskan!" : "Jom cuba lagi!";
+  $("resultScore").textContent = "Betul " + right + " daripada " + total;
+
+  const list = $("wrongList");
+  list.innerHTML = "";
+  missed.forEach(function (c) {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = c.ar;
+    chip.onclick = function () { playCard(c); };
+    list.appendChild(chip);
+  });
+  $("wrongNote").textContent = missed.length ? "Tekan kad merah untuk dengar semula 🔊" : "";
+
+  const rb = $("reviseBtn");
+  rb.classList.toggle("hidden", missed.length === 0);
+  rb.textContent = "🔁 Ulang yang salah (" + missed.length + ")";
+  rb.onclick = function () { startSession(missed, "🔁 Ulang: " + stripIcon(s.title), null, true); };
+
+  $("againBtn").onclick = function () { startSession(s.original, s.title, s.deck, s.revise); };
+  show("results");
+}
+function stripIcon(t) { return t.replace(/^🔁 (Ulang: )?/, ""); }
+
+$("menuBtn").onclick = function () { session = null; renderHome(); show("home"); };
+
+// =====================================================================
+//  Home Screen icon (iPhone needs a PNG)
+// =====================================================================
+function makeAppleIcon() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 180;
+  const g = c.getContext("2d");
+  const grad = g.createLinearGradient(0, 0, 0, 180);
+  grad.addColorStop(0, "#2fc493");
+  grad.addColorStop(1, "#137a58");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 180, 180);
+  // open book
+  g.fillStyle = "#fffdf6";
+  g.beginPath();
+  g.moveTo(90, 132); g.quadraticCurveTo(60, 116, 28, 124); g.lineTo(28, 60);
+  g.quadraticCurveTo(60, 52, 90, 68); g.closePath(); g.fill();
+  g.beginPath();
+  g.moveTo(90, 132); g.quadraticCurveTo(120, 116, 152, 124); g.lineTo(152, 60);
+  g.quadraticCurveTo(120, 52, 90, 68); g.closePath(); g.fill();
+  g.fillStyle = "#137a58";
+  g.font = "bold 46px 'Geeza Pro', serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText("أ", 58, 92);
+  g.fillText("ب", 122, 88);
+  $("appleIcon").href = c.toDataURL("image/png");
+}
+
+renderHome();
+makeAppleIcon();
+</script>
+</body>
+</html>
