@@ -6,7 +6,7 @@ the last vowel of a word ("katab" for كَتَبَ). This script turns each card
 Piper voice ar_JO-SA_dii-high.
 
 Setup (once):
-    pip install piper-tts numpy
+    pip install piper-tts numpy onnx
     # also needs node and ffmpeg
     curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-ar_JO-SA_dii-high.tar.bz2
     tar xjf vits-piper-ar_JO-SA_dii-high.tar.bz2
@@ -28,8 +28,9 @@ CONS = {
     "ط": "t̪", "ظ": "ð", "ع": "ʕ", "غ": "ɣ", "ف": "f", "ق": "q", "ك": "k",
     "ل": "l", "م": "m", "ن": "n", "ه": "h", "و": "w", "ي": "j", "ة": "t",
 }
-# Letters espeak marks with a "dark" (emphatic) vowel
-HEAVY = set("صضطظق")
+# Heavy (tebal) letters: their fathah is read with a dark vowel, e.g. "kho", "qo".
+# The voice marks a dark vowel with "." after it. ر is heavy with fathah/dammah ("ro").
+HEAVY = set("خصضغطظق")
 SUN = set("تثدذرزسشصضطظلن")
 
 
@@ -78,7 +79,7 @@ def word_to_phonemes(word):
         if ch == "ل" and not marks and nxt and SHADDA in nxt[1] and nxt[0] == "ل":
             i += 1; continue                 # the silent lam in allaah
         ph.append(c + c if SHADDA in marks else c)
-        heavy = "." if ch in HEAVY else ""
+        heavy = "." if ch in HEAVY or (ch == "ر" and not (KASRA in marks or TAN_K in marks)) else ""
         if DAGGER in marks:
             ph.append("a" + heavy + "ː")
         elif FATHA in marks:
@@ -97,6 +98,10 @@ def word_to_phonemes(word):
         elif TAN_D in marks:
             ph.append("un")
         i += 1
+    # The voice learned Arabic as people speak it, dropping a word's last short vowel
+    # ("katab", "amar"). Iqra reads it in full, so make the last vowel a little longer.
+    if ph and ph[-1].rstrip(".")[-1:] in ("a", "i", "u"):
+        ph[-1] += "ˑ"
     return ph
 
 
@@ -113,7 +118,8 @@ def stress(ph):
 
 
 def phonemes(text):
-    return " ".join(stress(word_to_phonemes(w)) for w in text.split())
+    # Mad (long vowels) = 2 counts, so make them clearly twice as long as a short vowel
+    return " ".join(stress(word_to_phonemes(w)) for w in text.split()).replace("ː", "ːˑ")
 
 
 
@@ -137,18 +143,48 @@ if __name__ == "__main__":
             print(c["id"], c["rumi"], "|", phonemes(c["ar"]))
         sys.exit()
 
+    import shutil
     import numpy as np
     from piper.voice import PiperVoice
     from piper.config import SynthesisConfig
-    voice = PiperVoice.load(sys.argv[1])
-    cfg = SynthesisConfig(length_scale=1.25, noise_scale=0.5, noise_w_scale=0.6)
+
     os.makedirs("iqra/audio", exist_ok=True)
-    rate = voice.config.sample_rate
     with tempfile.TemporaryDirectory() as tmp:
+        # Make a copy of the voice that also reports how long each sound lasts
+        model = os.path.join(tmp, "voice.onnx")
+        shutil.copy(sys.argv[1], model)
+        shutil.copy(sys.argv[1] + ".json", model + ".json")
+        subprocess.run([sys.executable, "-m", "piper.patch_voice_with_alignment", model],
+                       check=True, capture_output=True)
+        voice = PiperVoice.load(model)
+        rate = voice.config.sample_rate
+        symbol = {i: k for k, ids in voice.config.phoneme_id_map.items() for i in ids}
+        # Slow and steady, same timing every time
+        cfg = SynthesisConfig(length_scale=1.9, noise_scale=0.5, noise_w_scale=0.0)
+
+        def speak(p):
+            """Return (audio, length of the last vowel in ms) for a phoneme string."""
+            # Say it followed by a dummy "a", so the voice doesn't treat the card's last
+            # sound as the end of a sentence (where it would swallow it)...
+            ids = voice.phonemes_to_ids(list(p + " ʔˈa"))
+            audio, durations = voice.phoneme_ids_to_audio(ids, cfg, include_alignments=True)
+            # ...then cut the audio exactly where the dummy word starts
+            space = max(i for i, x in enumerate(ids) if symbol[x] == " ")
+            last_vowel = max(i for i in range(space) if symbol[ids[i]] in "aiu")
+            end_ms = sum(durations[last_vowel:space]) / rate * 1000
+            return audio[: int(sum(durations[:space]))].copy(), end_ms
+
         for c in cards:
             p = phonemes(c["ar"])
-            print(c["id"], c["rumi"], "|", p)
-            audio = voice.phoneme_ids_to_audio(voice.phonemes_to_ids(list(p)), cfg)
+            # A card ending in a short vowel should end with at least ~100 ms of it, so it is
+            # clearly heard ("amaro", not "amar"). Lengthen it a step at a time until it is.
+            for extra in range(3 if p.endswith("ˑ") else 1):
+                audio, end_ms = speak(p + "ˑ" * extra)
+                if end_ms >= 100:
+                    break
+            print(c["id"], c["rumi"], "|", p + "ˑ" * extra, f"| last vowel {end_ms:.0f} ms")
+            fade = int(rate * 0.03)
+            audio[-fade:] *= np.linspace(1, 0, fade)
             pcm = (audio * 32767).clip(-32768, 32767).astype("int16")
             pad = np.zeros(int(rate * 0.15), dtype="int16")   # so phones don't clip the start
             pcm = np.concatenate([pad, pcm, pad])
