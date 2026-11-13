@@ -42,7 +42,9 @@ A flashcard game in `iqra/index.html` that helps kids learn to read Iqra and sho
 - The child reads the card, then presses **🔊 Semak** to hear the correct reading and see the rumi spelling.
 - Then press **✅ Betul** or **❌ Salah**.
 - At the end, press **🔁 Ulang yang salah** to go through only the wrong cards again. The home screen also has **🔁 Ulang Kad Salah**, which collects every wrong card from every deck. A card leaves the list when it is marked Betul.
-- Iqra cards are read by the phone's Arabic voice. Surah ayat play a real recitation by Syeikh Mahmud Khalil Al-Husary (from everyayah.com, needs internet), and use the phone's voice when offline.
+- Each Iqra card has its own audio file in `iqra/audio/`. They were made with `tools/make_iqra_audio.py`, which tells a computer voice exactly which sounds to say, so بَ is read "ba" (not the letter name) and كَتَبَ is read "kataba" (not "katab"). If you change the Iqra cards, run that script again.
+- Surah ayat play a real recitation by Syeikh Mahmud Khalil Al-Husary (from everyayah.com, needs internet).
+- If a file can't play, the phone's Arabic voice is used instead.
 - Options: shuffle cards, slow voice. Progress is saved on the phone.
 
 Play it at `/iqra/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/iqra/
