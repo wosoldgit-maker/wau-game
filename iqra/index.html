@@ -510,9 +510,11 @@
 // =====================================================================
 //  CONTENT
 //  Each card: [arabic, rumi, meaning?]
-//  Iqra cards are spoken by the phone's Arabic voice.
-//  Quran cards play a real qari recitation (Syeikh Mahmud Khalil Al-Husary)
-//  and fall back to the phone's Arabic voice when offline.
+//  Iqra cards play their own file in audio/ (e.g. audio/iqra1-1.mp3).
+//  These are made by tools/make_iqra_audio.py; if you change, add or
+//  reorder Iqra cards, run it again so the files match.
+//  Quran cards play a real qari recitation (Syeikh Mahmud Khalil Al-Husary).
+//  If a file can't play, the phone's Arabic voice is used instead.
 // =====================================================================
 const DECKS = [
   {
@@ -710,10 +712,18 @@ function speakable(text) {
 let currentAudio = null;
 function stopSound() {
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  // Only cancel when something is talking: on iOS a cancel() right before speak()
+  // can silently swallow the new speech
+  if ("speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending)) {
+    speechSynthesis.cancel();
+  }
   listenBtn.classList.remove("playing");
 }
 
+// Only used when an audio file can't be played.
+// (The phone's voice reads lone letters by their name, e.g. "baa'" for بَ,
+//  which is why every Iqra card has its own recorded file instead.)
+let lastUtterance = null;   // keep a reference: Safari can drop unreferenced utterances
 function speakTTS(text) {
   if (!("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(speakable(text));
@@ -721,49 +731,47 @@ function speakTTS(text) {
   if (arabicVoice) u.voice = arabicVoice;
   u.rate = save.slow ? 0.6 : 0.9;
   u.onend = u.onerror = function () { listenBtn.classList.remove("playing"); };
+  lastUtterance = u;
   listenBtn.classList.add("playing");
+  speechSynthesis.resume();   // iOS sometimes leaves speech paused
   speechSynthesis.speak(u);
+}
+
+// Which audio file belongs to a card
+function audioUrl(card) {
+  if (card.deck.surah) {
+    // Real recitation for Quran ayat, e.g. 112001.mp3 = Surah 112, ayat 1
+    return RECITER_URL + String(card.deck.surah).padStart(3, "0") +
+      String(card.index + 1).padStart(3, "0") + ".mp3";
+  }
+  // Iqra cards: files in the audio folder next to this page, e.g. audio/iqra1-1.mp3
+  return "audio/" + card.id + ".mp3";
 }
 
 function playCard(card) {
   stopSound();
-  const deck = card.deck;
-  if (deck.surah) {
-    // Real recitation for Quran ayat
-    const file = String(deck.surah).padStart(3, "0") + String(card.index + 1).padStart(3, "0") + ".mp3";
-    const audio = new Audio(RECITER_URL + file);
-    audio.playbackRate = save.slow ? 0.85 : 1;
-    currentAudio = audio;
-    listenBtn.classList.add("playing");
-    let fellBack = false;
-    function fallback() {
-      if (fellBack || currentAudio !== audio) return;
-      fellBack = true;
-      currentAudio = null;
-      speakTTS(card.ar);
-    }
-    audio.onended = function () { listenBtn.classList.remove("playing"); };
-    audio.onerror = fallback;
-    const p = audio.play();
-    if (p && p.catch) p.catch(fallback);
-  } else {
+  const audio = new Audio(audioUrl(card));
+  // Recitation is slowed a little; Iqra files are already recorded slowly
+  audio.playbackRate = save.slow && card.deck.surah ? 0.85 : 1;
+  currentAudio = audio;
+  listenBtn.classList.add("playing");
+  let fellBack = false;
+  function fallback() {
+    if (fellBack || currentAudio !== audio) return;
+    fellBack = true;
+    currentAudio = null;
     speakTTS(card.ar);
   }
+  audio.onended = function () { listenBtn.classList.remove("playing"); };
+  audio.onerror = fallback;
+  const p = audio.play();
+  if (p && p.catch) p.catch(fallback);
 }
 
 function updateVoiceNotice() {
-  const n = document.getElementById("voiceNotice");
-  if (!("speechSynthesis" in window)) {
-    n.innerHTML = "⚠️ Pelayar ini tidak boleh bercakap. Cuba buka dalam Safari atau Chrome.";
-    n.classList.add("on");
-  } else if (!arabicVoice && speechSynthesis.getVoices().length > 0) {
-    n.innerHTML = "⚠️ Suara Bahasa Arab tidak dijumpai pada peranti ini. " +
-      "Di iPhone: <b>Settings → Accessibility → Spoken Content → Voices → Arabic</b>, muat turun satu suara. " +
-      "Surah Al-Quran masih boleh didengar (perlu internet).";
-    n.classList.add("on");
-  } else {
-    n.classList.remove("on");
-  }
+  // Every card now has its own audio file, so the phone's voice is only a backup
+  // and there is nothing to warn about.
+  document.getElementById("voiceNotice").classList.remove("on");
 }
 
 // Little happy / sad sounds
