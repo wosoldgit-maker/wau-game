@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BOP Desk</title>
+<meta name="description" content="A game for learning BNM's External Sector Statistics (Cash BOP) reporting rules, including the tricky cases.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BOP Desk">
+<meta name="theme-color" content="#0f2a3d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f2a3d'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' fill='%23f2b544' font-family='Arial' font-weight='bold'%3EB%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --bg2: #ebe6db;
+    --card: #ffffff;
+    --ink: #142230;
+    --muted: #5f6b77;
+    --line: #ddd6c8;
+    --brand: #0f2a3d;
+    --brand2: #1d4b6b;
+    --gold: #e2a422;
+    --gold-soft: #fbefd2;
+    --right: #1f9d5a;
+    --right-soft: #e2f5ea;
+    --wrong: #d0443c;
+    --wrong-soft: #fbe6e4;
+    --trap: #8a4fd6;
+    --chip: #eef2f5;
+    --shadow: 0 1px 2px rgba(20,34,48,.06), 0 6px 20px rgba(20,34,48,.07);
+    --top: env(safe-area-inset-top);
+    --bottom: env(safe-area-inset-bottom);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1820; --bg2: #13222d; --card: #172a37; --ink: #e8eef2; --muted: #9db0bd;
+      --line: #27404f; --brand: #0a1c28; --brand2: #2a6c94; --gold: #f2b544; --gold-soft: #3a3016;
+      --right: #3cc47c; --right-soft: #123426; --wrong: #ff6b62; --wrong-soft: #3d1a19;
+      --trap: #b48cff; --chip: #20384a; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1820; --bg2: #13222d; --card: #172a37; --ink: #e8eef2; --muted: #9db0bd;
+    --line: #27404f; --brand: #0a1c28; --brand2: #2a6c94; --gold: #f2b544; --gold-soft: #3a3016;
+    --right: #3cc47c; --right-soft: #123426; --wrong: #ff6b62; --wrong-soft: #3d1a19;
+    --trap: #b48cff; --chip: #20384a; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100vh;
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; touch-action: manipulation; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  #app { max-width: 640px; margin: 0 auto; padding: calc(var(--top) + 12px) 16px calc(var(--bottom) + 28px); }
+
+  /* ---------- top bar ---------- */
+  .bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; min-height: 40px; }
+  .bar h2 { font-size: 17px; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .back { width: 40px; height: 40px; border-radius: 12px; background: var(--card); box-shadow: var(--shadow); font-size: 20px; flex: none; }
+  .pill { background: var(--card); box-shadow: var(--shadow); border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+
+  /* ---------- home ---------- */
+  .hero {
+    background: linear-gradient(150deg, var(--brand) 0%, var(--brand2) 100%);
+    color: #fff; border-radius: 22px; padding: 22px 20px 20px; position: relative; overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .hero::after {
+    content: ""; position: absolute; right: -40px; top: -40px; width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(242,181,68,.35), transparent 70%);
+  }
+  .hero .tag { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .8; font-weight: 700; }
+  .hero h1 { margin: 4px 0 6px; font-size: 34px; letter-spacing: -.02em; line-height: 1.05; }
+  .hero h1 span { color: #f2b544; }
+  .hero p { margin: 0; opacity: .88; font-size: 14.5px; max-width: 30em; }
+  .rank { margin-top: 16px; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.1); border-radius: 14px; padding: 10px 12px; position: relative; z-index: 1; }
+  .rank .badge { font-size: 26px; }
+  .rank b { display: block; font-size: 15px; }
+  .rank small { opacity: .8; font-size: 12.5px; }
+  .meter { height: 6px; background: rgba(255,255,255,.18); border-radius: 9px; margin-top: 6px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: #f2b544; border-radius: 9px; }
+
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .mode {
+    background: var(--card); border-radius: 18px; padding: 16px 14px; text-align: left; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 4px; min-height: 120px; border: 1px solid transparent;
+    transition: transform .12s ease;
+  }
+  .mode:active { transform: scale(.98); }
+  .mode .ic { font-size: 26px; }
+  .mode b { font-size: 16px; }
+  .mode small { color: var(--muted); font-size: 13px; line-height: 1.35; }
+  .mode.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 0; }
+  .mode.wide .ic { font-size: 32px; }
+  .mode.primary { background: var(--gold-soft); border-color: var(--gold); }
+  .foot { color: var(--muted); font-size: 12.5px; margin-top: 18px; text-align: center; }
+  .foot button { text-decoration: underline; color: var(--muted); font-size: 12.5px; }
+
+  /* ---------- chapter list ---------- */
+  .chlist { display: flex; flex-direction: column; gap: 10px; }
+  .ch {
+    display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 16px; padding: 12px 14px;
+    box-shadow: var(--shadow); text-align: left; width: 100%;
+  }
+  .ch .num { width: 42px; height: 42px; border-radius: 12px; background: var(--chip); display: grid; place-items: center; font-size: 21px; flex: none; }
+  .ch .t { flex: 1; min-width: 0; }
+  .ch b { display: block; font-size: 15.5px; }
+  .ch small { color: var(--muted); font-size: 12.5px; display: block; }
+  .ch .st { font-size: 14px; letter-spacing: 1px; white-space: nowrap; color: var(--gold); }
+  .ch .st .off { color: var(--line); }
+
+  /* ---------- play ---------- */
+  .progress { display: flex; gap: 4px; margin-bottom: 14px; }
+  .progress i { flex: 1; height: 5px; border-radius: 9px; background: var(--line); }
+  .progress i.ok { background: var(--right); }
+  .progress i.no { background: var(--wrong); }
+  .progress i.cur { background: var(--gold); }
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 16px; }
+  .ticket {
+    border: 1.5px dashed var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 14px;
+    background: var(--bg2); font-size: 13.5px; position: relative;
+  }
+  .ticket .lbl { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .ticket .row { display: grid; grid-template-columns: 52px 1fr; gap: 6px; padding: 2px 0; }
+  .ticket .row span:first-child { color: var(--muted); font-weight: 600; }
+  .ticket .amt { font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700; }
+  .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .chip { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+  .chip.trap { background: color-mix(in srgb, var(--trap) 16%, transparent); color: var(--trap); }
+  .chip.multi { background: var(--gold-soft); color: var(--ink); }
+  .scene { font-size: 16.5px; font-weight: 600; margin: 0 0 14px; }
+  .opts { display: flex; flex-direction: column; gap: 9px; }
+  .opt {
+    text-align: left; padding: 13px 14px; border-radius: 14px; background: var(--bg2); border: 2px solid transparent;
+    font-size: 15px; font-weight: 500; display: flex; gap: 10px; align-items: flex-start; width: 100%;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .opt .k { flex: none; width: 24px; height: 24px; border-radius: 8px; background: var(--card); display: grid; place-items: center; font-size: 12.5px; font-weight: 800; color: var(--muted); margin-top: 1px; }
+  .opt.sel { border-color: var(--brand2); background: color-mix(in srgb, var(--brand2) 12%, var(--bg2)); }
+  .opt.sel .k { background: var(--brand2); color: #fff; }
+  .opt.right { border-color: var(--right); background: var(--right-soft); }
+  .opt.right .k { background: var(--right); color: #fff; }
+  .opt.wrong { border-color: var(--wrong); background: var(--wrong-soft); }
+  .opt.wrong .k { background: var(--wrong); color: #fff; }
+  .opt.missed { border-color: var(--right); border-style: dashed; }
+  .opt:disabled { cursor: default; }
+  .btn {
+    width: 100%; padding: 14px; border-radius: 14px; background: var(--brand2); color: #fff; font-weight: 700; font-size: 16px;
+    margin-top: 14px; box-shadow: var(--shadow);
+  }
+  .btn.gold { background: var(--gold); color: #1b1606; }
+  .btn.ghost { background: var(--card); color: var(--ink); }
+  .btn:disabled { opacity: .45; }
+  .fb { margin-top: 14px; border-radius: 14px; padding: 12px 14px; font-size: 14.5px; animation: pop .22s ease; }
+  .fb.ok { background: var(--right-soft); }
+  .fb.no { background: var(--wrong-soft); }
+  .fb h4 { margin: 0 0 4px; font-size: 15.5px; }
+  .fb .ref { margin-top: 8px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .fb .ref::before { content: "📘 "; }
+  @keyframes pop { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .steptag { font-size: 12px; font-weight: 800; color: var(--brand2); margin-bottom: 6px; letter-spacing: .04em; }
+  :root[data-theme="dark"] .steptag { color: var(--gold); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .steptag { color: var(--gold); } }
+
+  /* ---------- result ---------- */
+  .result { text-align: center; }
+  .result .big { font-size: 52px; font-weight: 800; letter-spacing: -.03em; margin: 6px 0 0; }
+  .result .stars { font-size: 34px; letter-spacing: 6px; color: var(--gold); }
+  .result .stars .off { color: var(--line); }
+  .result p { color: var(--muted); margin: 6px 0 0; }
+  .misslist { text-align: left; margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .miss { background: var(--bg2); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+  .miss b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .miss .ref { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+  /* ---------- rush / sorter / reconcile ---------- */
+  .hud { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .timer { height: 8px; border-radius: 9px; background: var(--line); overflow: hidden; margin-bottom: 14px; }
+  .timer i { display: block; height: 100%; background: var(--gold); transition: width .1s linear; }
+  .timer i.low { background: var(--wrong); }
+  .sortgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .sortbtn { padding: 16px 10px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); font-weight: 800; font-size: 15px; border: 2px solid transparent; }
+  .sortbtn small { display: block; font-weight: 500; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .sortbtn.right { border-color: var(--right); background: var(--right-soft); }
+  .sortbtn.wrong { border-color: var(--wrong); background: var(--wrong-soft); }
+  .stmt { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .stmt td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .stmt td:last-child { text-align: right; font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700; white-space: nowrap; }
+  .stmt tr.h td, .stmt tr.h td:last-child { text-align: left; font-family: inherit; font-weight: 800; color: var(--muted); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; border: 0; padding-top: 12px; }
+  .stmt tr.memo td { color: var(--muted); font-style: italic; }
+  .inp {
+    width: 100%; font: inherit; font-size: 22px; font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700;
+    padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--bg2); color: var(--ink); margin-top: 12px;
+  }
+  .inp:focus { outline: none; border-color: var(--brand2); }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(var(--bottom) + 18px); transform: translateX(-50%); max-width: 92vw; width: 560px;
+    background: var(--ink); color: var(--bg); padding: 12px 14px; border-radius: 14px; font-size: 14px; box-shadow: var(--shadow);
+    animation: pop .2s ease; z-index: 10;
+  }
+  .howto { font-size: 14px; color: var(--muted); margin: 0 0 12px; }
+  .lives { font-size: 18px; letter-spacing: 2px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="cases.js"></script>
+<script>
+"use strict";
+// ================= storage =================
+const KEY = "bopdesk.v1";
+function load() {
+  try { return Object.assign({ best: {}, missed: [], rush: 0, sorter: 0, recon: 0, seen: 0 }, JSON.parse(localStorage.getItem(KEY) || "{}")); }
+  catch (e) { return { best: {}, missed: [], rush: 0, sorter: 0, recon: 0, seen: 0 }; }
+}
+let S = load();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+// ================= helpers =================
+const $app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const fmtRM = n => "RM" + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtN = n => n.toLocaleString("en-MY");
+const KEYS = "ABCDEF";
+let timerId = null;
+function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+function toast(msg, ms = 2200) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.innerHTML = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+function starsFor(pct) { return pct >= 100 ? 3 : pct >= 80 ? 2 : pct >= 60 ? 1 : 0; }
+function starStr(n) { return "★".repeat(n) + '<span class="off">' + "★".repeat(3 - n) + "</span>"; }
+function totalStars() { return CHAPTERS.reduce((t, c) => t + starsFor(S.best[c.id] || 0), 0); }
+const RANKS = [
+  { at: 0,  icon: "🧾", name: "Trainee Clerk" },
+  { at: 6,  icon: "📎", name: "Cash BOP Clerk" },
+  { at: 14, icon: "🗂️", name: "ESS Executive" },
+  { at: 22, icon: "🧮", name: "ESS Officer" },
+  { at: 30, icon: "🏅", name: "Senior ESS Officer" },
+  { at: 38, icon: "🏛️", name: "Head of Reporting" }
+];
+function rankOf(st) { let r = RANKS[0]; for (const x of RANKS) if (st >= x.at) r = x; return r; }
+function caseById(id) { return CASES.find(c => c.id === id); }
+function chapterOf(id) { return CHAPTERS.find(c => c.id === id); }
+
+// Turn a case into one or more "questions" (multi-step cases become several)
+function toQuestions(c) {
+  if (c.steps) {
+    return c.steps.map((st, i) => ({ caseId: c.id, tk: c.tk, s: st.s, o: st.o, a: st.a, x: st.x, r: c.r, trap: c.trap, step: i + 1, of: c.steps.length }));
+  }
+  return [{ caseId: c.id, tk: c.tk, s: c.s, o: c.o, a: c.a, x: c.x, r: c.r, trap: c.trap }];
+}
+function prepare(q) {
+  const order = shuffle(q.o.map((_, i) => i));
+  const multi = Array.isArray(q.a);
+  return Object.assign({}, q, { order, multi });
+}
+
+// ================= HOME =================
+function home() {
+  stopTimer();
+  const st = totalStars(), rk = rankOf(st);
+  const next = RANKS.find(r => r.at > st);
+  const pct = next ? Math.round(((st - rk.at) / (next.at - rk.at)) * 100) : 100;
+  $app.innerHTML = `
+    <div class="hero">
+      <div class="tag">ESS · Cash Balance of Payments</div>
+      <h1>BOP <span>Desk</span></h1>
+      <p>You are the new ESS Officer. Transactions land on your desk. Classify them, route them, reconcile them, and avoid the traps that get a bank a letter from BNM.</p>
+      <div class="rank">
+        <div class="badge">${rk.icon}</div>
+        <div style="flex:1">
+          <b>${rk.name}</b>
+          <small>${st} / ${CHAPTERS.length * 3} stars${next ? ` · ${next.at - st} more for ${next.name}` : " · top rank"}</small>
+          <div class="meter"><i style="width:${pct}%"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="modes">
+      <button class="mode wide primary" data-go="chapters"><span class="ic">🗂️</span><span><b>Career: 14 desks</b><br><small>${CASES.length} cases covering Parts A–J. Each answer cites the paragraph in the policy document.</small></span></button>
+      <button class="mode" data-go="rush"><span class="ic">⚡</span><b>Month-End Rush</b><small>Mixed cases against the clock. 3 BNM letters and you are out.${S.rush ? `<br>Best: ${fmtN(S.rush)}` : ""}</small></button>
+      <button class="mode" data-go="sorter"><span class="ic">🎚️</span><b>Threshold Sorter</b><small>P/R, BP/BR, M or OP? 60 seconds, edge cases included.${S.sorter ? `<br>Best: ${S.sorter}` : ""}</small></button>
+      <button class="mode" data-go="recon"><span class="ic">📒</span><b>Reconcile E</b><small>Balance a Statement E. Watch for the memorandum items.${S.recon ? `<br>Best: ${S.recon}/5` : ""}</small></button>
+      <button class="mode" data-go="review"><span class="ic">🔁</span><b>Review mistakes</b><small>${S.missed.length ? `${S.missed.length} case${S.missed.length > 1 ? "s" : ""} waiting` : "Nothing yet. Cases you miss go here."}</small></button>
+    </div>
+    <div class="foot">Based on BNM/RH/PD 028-58 “External Sector Statistics (ESS) System”, issued 22 June 2026, effective 1 Sept 2026.<br>For study only. The policy document is the authority.
+      <br><button id="reset">Reset progress</button></div>`;
+  $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => {
+    const g = b.dataset.go;
+    if (g === "chapters") chapters();
+    if (g === "rush") rush();
+    if (g === "sorter") sorter();
+    if (g === "recon") recon();
+    if (g === "review") {
+      if (!S.missed.length) { toast("No missed cases yet. Play a desk first."); return; }
+      runSession({ title: "🔁 Review mistakes", cases: shuffle(S.missed.map(caseById).filter(Boolean)), review: true });
+    }
+  });
+  document.getElementById("reset").onclick = () => {
+    if (confirm("Reset all stars, best scores and missed cases?")) { S = { best: {}, missed: [], rush: 0, sorter: 0, recon: 0, seen: 0 }; save(); home(); }
+  };
+  window.scrollTo(0, 0);
+}
+
+// ================= CHAPTER LIST =================
+function chapters() {
+  stopTimer();
+  $app.innerHTML = `
+    <div class="bar"><button class="back" id="bk">‹</button><h2>Career: choose a desk</h2><span class="pill">★ ${totalStars()}</span></div>
+    <div class="chlist">
+      ${CHAPTERS.map(c => {
+        const n = CASES.filter(x => x.ch === c.id).length;
+        const best = S.best[c.id];
+        return `<button class="ch" data-ch="${c.id}">
+          <span class="num">${c.icon}</span>
+          <span class="t"><b>${c.n}. ${esc(c.name)}</b><small>${esc(c.sub)} · ${n} cases${best != null ? ` · best ${best}%` : ""}</small></span>
+          <span class="st">${starStr(starsFor(best || 0))}</span>
+        </button>`;
+      }).join("")}
+    </div>`;
+  document.getElementById("bk").onclick = home;
+  $app.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => {
+    const ch = chapterOf(b.dataset.ch);
+    runSession({ title: `${ch.icon} ${ch.name}`, chapter: ch.id, cases: shuffle(CASES.filter(c => c.ch === ch.id)) });
+  });
+  window.scrollTo(0, 0);
+}
+
+// ================= SESSION (career + review) =================
+function runSession(cfg) {
+  stopTimer();
+  const qs = [];
+  cfg.cases.forEach(c => toQuestions(c).forEach(q => qs.push(prepare(q))));
+  const st = { i: 0, results: [], wrongCases: new Set(), rightCases: new Set() };
+  showQ();
+
+  function showQ() {
+    const q = qs[st.i];
+    let chosen = new Set();
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>${esc(cfg.title)}</h2><span class="pill">${st.i + 1}/${qs.length}</span></div>
+      <div class="progress">${qs.map((_, i) => `<i class="${i < st.i ? (st.results[i] ? "ok" : "no") : i === st.i ? "cur" : ""}"></i>`).join("")}</div>
+      ${renderQ(q)}
+      <div id="after"></div>`;
+    document.getElementById("bk").onclick = () => { if (st.i === 0 || confirm("Leave this desk? Progress in this round will be lost.")) (cfg.review ? home : chapters)(); };
+    const btns = [...$app.querySelectorAll(".opt")];
+    const submit = document.getElementById("submit");
+    btns.forEach(b => b.onclick = () => {
+      const v = +b.dataset.v;
+      if (q.multi) {
+        chosen.has(v) ? chosen.delete(v) : chosen.add(v);
+        b.classList.toggle("sel");
+        submit.disabled = chosen.size === 0;
+      } else {
+        chosen = new Set([v]);
+        grade();
+      }
+    });
+    if (submit) submit.onclick = grade;
+
+    function grade() {
+      const ok = isRight(q, chosen);
+      st.results[st.i] = ok;
+      (ok ? st.rightCases : st.wrongCases).add(q.caseId);
+      markOptions(btns, q, chosen);
+      if (submit) submit.classList.add("hidden");
+      const last = st.i === qs.length - 1;
+      document.getElementById("after").innerHTML = feedback(q, ok) +
+        `<button class="btn" id="nx">${last ? "See results" : "Next ticket →"}</button>`;
+      document.getElementById("nx").onclick = () => { st.i++; st.i < qs.length ? showQ() : finish(); };
+      document.getElementById("nx").scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }
+
+  function finish() {
+    const right = st.results.filter(Boolean).length;
+    const pct = Math.round((right / qs.length) * 100);
+    // update missed list: add any case with a wrong step; remove cases fully right
+    const missed = new Set(S.missed);
+    st.wrongCases.forEach(id => missed.add(id));
+    st.rightCases.forEach(id => { if (!st.wrongCases.has(id)) missed.delete(id); });
+    S.missed = [...missed];
+    let newBest = false;
+    if (cfg.chapter) {
+      if (S.best[cfg.chapter] == null || pct > S.best[cfg.chapter]) { S.best[cfg.chapter] = pct; newBest = true; }
+    }
+    save();
+    const stars = starsFor(pct);
+    const wrongList = [...st.wrongCases].map(caseById);
+    const verdict = pct === 100 ? "Clean submission. No queries from BNM." :
+      pct >= 80 ? "Good month. A few amendments, each needing the HOR’s endorsement." :
+      pct >= 60 ? "Passable. Expect some queries from the Bank." :
+      "BNM would be writing to you. Review the cases below and try again.";
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>${esc(cfg.title)}</h2></div>
+      <div class="card result">
+        ${cfg.chapter ? `<div class="stars">${starStr(stars)}</div>` : ""}
+        <div class="big">${pct}%</div>
+        <p><b>${right}</b> of ${qs.length} correct${newBest && cfg.chapter ? " · new best!" : ""}</p>
+        <p style="margin-top:10px;color:var(--ink)">${verdict}</p>
+        ${wrongList.length ? `<div class="misslist"><b style="font-size:14px">To revisit (saved to Review):</b>${wrongList.map(c => `
+          <div class="miss"><b>${esc(c.steps ? c.steps[0].s : c.s)}</b>${esc(c.steps ? c.steps.map(s => s.x).join(" ") : c.x)}<div class="ref">📘 ${esc(c.r)}</div></div>`).join("")}</div>` : ""}
+        <button class="btn gold" id="again">Play this again</button>
+        <button class="btn ghost" id="out">${cfg.review ? "Home" : "Back to desks"}</button>
+      </div>`;
+    document.getElementById("bk").onclick = cfg.review ? home : chapters;
+    document.getElementById("out").onclick = cfg.review ? home : chapters;
+    document.getElementById("again").onclick = () => {
+      if (cfg.review) {
+        if (!S.missed.length) { toast("Review list is empty. Nice work!"); home(); return; }
+        runSession(Object.assign({}, cfg, { cases: shuffle(S.missed.map(caseById).filter(Boolean)) }));
+      } else runSession(Object.assign({}, cfg, { cases: shuffle(cfg.cases) }));
+    };
+    window.scrollTo(0, 0);
+  }
+}
+
+function renderQ(q) {
+  const tk = q.tk ? `
+    <div class="ticket">
+      <div class="lbl"><span>Transaction ticket</span><span class="mono">#${q.caseId.toUpperCase()}</span></div>
+      <div class="row"><span>From</span><span>${esc(q.tk.from)}</span></div>
+      <div class="row"><span>To</span><span>${esc(q.tk.to)}</span></div>
+      <div class="row"><span>Amount</span><span class="amt">${esc(q.tk.amt)}</span></div>
+      ${q.tk.via ? `<div class="row"><span>Via</span><span>${esc(q.tk.via)}</span></div>` : ""}
+    </div>` : "";
+  return `<div class="card">
+    ${tk}
+    <div class="meta">${q.step ? `<span class="chip">Step ${q.step} of ${q.of}</span>` : ""}${q.multi ? `<span class="chip multi">Pick all that apply</span>` : ""}</div>
+    <p class="scene">${esc(q.s)}</p>
+    <div class="opts">${q.order.map((oi, k) => `<button class="opt" data-v="${oi}"><span class="k">${KEYS[k]}</span><span>${esc(q.o[oi])}</span></button>`).join("")}</div>
+    ${q.multi ? `<button class="btn" id="submit" disabled>Submit</button>` : ""}
+  </div>`;
+}
+function isRight(q, chosen) {
+  if (q.multi) { const want = new Set(q.a); return want.size === chosen.size && [...want].every(v => chosen.has(v)); }
+  return chosen.has(q.a);
+}
+function markOptions(btns, q, chosen) {
+  const want = new Set(q.multi ? q.a : [q.a]);
+  btns.forEach(b => {
+    const v = +b.dataset.v;
+    b.disabled = true;
+    b.classList.remove("sel");
+    if (want.has(v) && chosen.has(v)) b.classList.add("right");
+    else if (want.has(v)) b.classList.add(q.multi ? "missed" : "right");
+    else if (chosen.has(v)) b.classList.add("wrong");
+  });
+}
+function feedback(q, ok) {
+  const head = ok ? (q.trap ? "✅ Correct, and you avoided the trap" : "✅ Correct") : (q.trap ? "🪤 Trap! Not quite" : "❌ Not quite");
+  return `<div class="fb ${ok ? "ok" : "no"}">
+    ${q.trap ? `<span class="chip trap" style="float:right">trap</span>` : ""}
+    <h4>${head}</h4>${esc(q.x)}<div class="ref">${esc(q.r)}</div></div>`;
+}
+
+// ================= MONTH-END RUSH =================
+function rush() {
+  stopTimer();
+  const pool = shuffle(CASES.filter(c => !c.steps)).slice(0, 20).map(c => prepare(toQuestions(c)[0]));
+  const st = { i: 0, score: 0, lives: 3, combo: 0, right: 0 };
+  const LIMIT = 25;
+  intro();
+
+  function intro() {
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>⚡ Month-End Rush</h2></div>
+      <div class="card">
+        <p class="scene">It is the 14th. The Statements BP/BR, M and E/F are due tomorrow.</p>
+        <p class="howto">20 mixed tickets from every Part. ${LIMIT} seconds each. A fast correct answer earns more points, and a streak multiplies them. Each wrong or late answer is a <b>prompt letter from BNM</b> ✉️. After the third, your report counts as a <b>non-submission</b>.</p>
+        <button class="btn gold" id="go">Start the rush</button>
+      </div>`;
+    document.getElementById("bk").onclick = home;
+    document.getElementById("go").onclick = next;
+  }
+  function hud() {
+    return `<div class="hud"><span class="pill">⭐ ${fmtN(st.score)}</span><span class="pill">🔥 x${1 + Math.min(st.combo, 4) * 0.5}</span><span class="pill lives">${"✉️".repeat(3 - st.lives)}${"▫️".repeat(st.lives)}</span><span class="pill">${st.i + 1}/${pool.length}</span></div>`;
+  }
+  function next() {
+    stopTimer();
+    if (st.lives <= 0 || st.i >= pool.length) return end();
+    const q = pool[st.i];
+    let chosen = new Set(), done = false, t0 = Date.now();
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>⚡ Month-End Rush</h2></div>
+      ${hud()}
+      <div class="timer"><i id="tb" style="width:100%"></i></div>
+      ${renderQ(q)}
+      <div id="after"></div>`;
+    document.getElementById("bk").onclick = () => { if (confirm("Abandon the rush?")) { stopTimer(); home(); } };
+    const btns = [...$app.querySelectorAll(".opt")];
+    const submit = document.getElementById("submit");
+    btns.forEach(b => b.onclick = () => {
+      if (done) return;
+      const v = +b.dataset.v;
+      if (q.multi) { chosen.has(v) ? chosen.delete(v) : chosen.add(v); b.classList.toggle("sel"); submit.disabled = chosen.size === 0; }
+      else { chosen = new Set([v]); grade(false); }
+    });
+    if (submit) submit.onclick = () => grade(false);
+    const tb = document.getElementById("tb");
+    timerId = setInterval(() => {
+      const left = LIMIT - (Date.now() - t0) / 1000;
+      tb.style.width = Math.max(0, (left / LIMIT) * 100) + "%";
+      if (left < 6) tb.classList.add("low");
+      if (left <= 0) grade(true);
+    }, 100);
+
+    function grade(timeout) {
+      if (done) return; done = true; stopTimer();
+      const ok = !timeout && isRight(q, chosen);
+      const left = Math.max(0, LIMIT - (Date.now() - t0) / 1000);
+      if (ok) {
+        st.right++;
+        const mult = 1 + Math.min(st.combo, 4) * 0.5;
+        st.score += Math.round((100 + left * 8) * mult);
+        st.combo++;
+      } else { st.lives--; st.combo = 0; }
+      markOptions(btns, q, chosen);
+      if (submit) submit.classList.add("hidden");
+      if (!ok) { const m = new Set(S.missed); m.add(q.caseId); S.missed = [...m]; save(); }
+      document.getElementById("after").innerHTML =
+        (timeout ? `<div class="fb no"><h4>⏰ Time’s up. That is a BNM prompt letter.</h4>${esc(q.x)}<div class="ref">${esc(q.r)}</div></div>` : feedback(q, ok)) +
+        `<button class="btn" id="nx">${st.lives <= 0 ? "See the damage" : "Next →"}</button>`;
+      st.i++;
+      document.getElementById("nx").onclick = next;
+      document.getElementById("nx").scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }
+  function end() {
+    stopTimer();
+    const best = st.score > S.rush;
+    if (best) S.rush = st.score;
+    save();
+    const outcome = st.lives <= 0 ? "Three prompt letters. Your statement counts as a <b>non-submission</b>." :
+      st.lives === 3 ? "Every ticket on time and correct. Exemplary." : "Submitted on time, with a few letters to answer.";
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>⚡ Month-End Rush</h2></div>
+      <div class="card result">
+        <div class="big">${fmtN(st.score)}</div>
+        <p>${st.right} correct · ${best ? "new best!" : `best ${fmtN(S.rush)}`}</p>
+        <p style="margin-top:10px;color:var(--ink)">${outcome}</p>
+        <button class="btn gold" id="again">Rush again</button>
+        <button class="btn ghost" id="out">Home</button>
+      </div>`;
+    document.getElementById("bk").onclick = home;
+    document.getElementById("out").onclick = home;
+    document.getElementById("again").onclick = rush;
+  }
+}
+
+// ================= THRESHOLD SORTER =================
+const BINS = [
+  { id: "PR", name: "Form P/R", sub: "individual" },
+  { id: "BP", name: "BP / BR", sub: "monthly bulk" },
+  { id: "M",  name: "Statement M", sub: "workers’ remittances" },
+  { id: "OP", name: "OP / OR", sub: "admin code only" }
+];
+function cents() { return pick([0, 0, 0, 0.5, 0.99, 0.01, 0.25]); }
+function amountIn(band) {
+  // band: "small" (<10,001), "bulk" (10,001–200,000.99), "big" (>=200,001), "edge"
+  if (band === "small") return rnd(150, 10000) + cents();
+  if (band === "bulk") return rnd(10001, 200000) + cents();
+  if (band === "big") return rnd(200001, 9000000) + cents();
+  return pick([10000.99, 10001.00, 200000.99, 200001.00, 9999.5, 199999.99]);
+}
+function bandBin(v) { return v >= 200001 ? "PR" : v >= 10001 ? "BP" : "OP"; }
+function makeSortItem() {
+  const kind = pick(["trade", "trade", "trade", "fw", "fw", "stw", "mys", "fxfi", "mm", "mmlong", "edge", "edge"]);
+  const band = pick(["small", "bulk", "big"]);
+  let v, text, bin, why;
+  switch (kind) {
+    case "trade": {
+      v = amountIn(band);
+      const who = pick(["Resident exporter receives from a Japanese buyer", "Resident pays a Singapore consultant", "Resident pays university fees in the UK", "Resident receives a dividend from its Thai subsidiary", "Resident buys machinery from Germany"]);
+      text = `${who}: <b>${fmtRM(v)}</b>`;
+      bin = bandBin(v);
+      why = bin === "PR" ? "RM200,001 or more → Form P/R" : bin === "BP" ? "RM10,001 to RM200,000.99 → BP/BR" : "Below RM10,001 → OP/OR 71100";
+      break;
+    }
+    case "fw": {
+      v = pick([amountIn("small"), amountIn("small"), amountIn("bulk")]);
+      text = `Bangladeshi worker (2-year permit) remits home: <b>${fmtRM(v)}</b>`;
+      bin = v < 10001 ? "M" : "BP";
+      why = bin === "M" ? "Foreign worker staying 1 year or more, below RM10,001 → Statement M" : "Statement M is only for amounts below RM10,001; this one → BP";
+      break;
+    }
+    case "stw": {
+      v = amountIn("small");
+      text = `Seasonal worker (5-month contract) remits home: <b>${fmtRM(v)}</b>`;
+      bin = "OP";
+      why = "Under 12 months = short-term worker, not a “foreign worker” for Statement M → OP 71100";
+      break;
+    }
+    case "mys": {
+      v = amountIn("small");
+      text = `Malaysian working in Qatar sends money home: <b>${fmtRM(v)}</b>`;
+      bin = "M";
+      why = "Malaysians working abroad sending home below RM10,001 → Statement M (receipt)";
+      break;
+    }
+    case "fxfi": {
+      v = pick([amountIn("big") * 20, amountIn("bulk")]);
+      text = `Your treasury sells USD to a Hong Kong bank, equivalent to <b>${fmtRM(v)}</b>`;
+      bin = "OP";
+      why = "FX between Resident FIs and NR FIs, whatever the amount → OP/OR 71300";
+      break;
+    }
+    case "mm": {
+      v = amountIn("big") * 10;
+      const d = pick([7, 14, 30, 31]);
+      text = `Interbank placement with a Singapore bank, original tenure ${d} days: <b>${fmtRM(v)}</b>`;
+      bin = "OP";
+      why = "Money market between Resident FI and NR FI with original tenure of 31 days or less → OP/OR 71200, whatever the amount";
+      break;
+    }
+    case "mmlong": {
+      v = amountIn("big") * 10;
+      const d = pick([32, 45, 90]);
+      text = `Interbank placement with a Singapore bank, original tenure ${d} days: <b>${fmtRM(v)}</b>`;
+      bin = "PR";
+      why = "More than 31 days is no longer the 71200 exception → Form P/R";
+      break;
+    }
+    default: {
+      v = amountIn("edge");
+      text = `Resident pays a Korean supplier: <b>${fmtRM(v)}</b>`;
+      bin = bandBin(v);
+      why = v === 200000.99 ? "RM200,000.99 is still BP (P/R starts at RM200,001.00)" :
+            v === 200001 ? "Exactly RM200,001.00 → Form P" :
+            v === 10001 ? "Exactly RM10,001.00 → BP" :
+            v >= 10001 ? "RM10,001 to RM200,000.99 → BP" : "Below RM10,001.00 → OP 71100";
+    }
+  }
+  return { text, bin, why };
+}
+function sorter() {
+  stopTimer();
+  const st = { score: 0, streak: 0, done: 0, end: 0, item: null, locked: false };
+  $app.innerHTML = `
+    <div class="bar"><button class="back" id="bk">‹</button><h2>🎚️ Threshold Sorter</h2></div>
+    <div class="card">
+      <p class="scene">Tickets keep coming. Sort each one into the right report.</p>
+      <p class="howto">60 seconds. A correct answer scores 1, and a streak of 5 or more scores 2. A wrong answer costs 3 seconds and shows the rule. Watch the edges: RM10,000.99 vs RM10,001.00, RM200,000.99 vs RM200,001.00, 31-day vs 32-day placements, and workers staying under a year.</p>
+      <button class="btn gold" id="go">Start sorting</button>
+    </div>`;
+  document.getElementById("bk").onclick = home;
+  document.getElementById("go").onclick = start;
+
+  function start() {
+    st.end = Date.now() + 60000;
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>🎚️ Threshold Sorter</h2></div>
+      <div class="hud"><span class="pill" id="sc">✔ 0</span><span class="pill" id="sk">🔥 0</span><span class="pill" id="tm">60s</span></div>
+      <div class="timer"><i id="tb" style="width:100%"></i></div>
+      <div class="card"><div class="ticket" style="margin:0"><div class="lbl"><span>Incoming</span><span class="mono" id="no">#1</span></div><div id="it" style="font-size:16px;font-weight:600"></div></div></div>
+      <div class="sortgrid">${BINS.map(b => `<button class="sortbtn" data-b="${b.id}">${b.name}<small>${b.sub}</small></button>`).join("")}</div>
+      <div id="why" class="howto" style="margin-top:12px;min-height:40px"></div>`;
+    document.getElementById("bk").onclick = () => { stopTimer(); home(); };
+    $app.querySelectorAll(".sortbtn").forEach(b => b.onclick = () => answer(b));
+    nextItem();
+    timerId = setInterval(tick, 100);
+  }
+  function tick() {
+    const left = (st.end - Date.now()) / 1000;
+    const tb = document.getElementById("tb");
+    if (!tb) return stopTimer();
+    tb.style.width = Math.max(0, left / 60 * 100) + "%";
+    if (left < 10) tb.classList.add("low");
+    document.getElementById("tm").textContent = Math.max(0, Math.ceil(left)) + "s";
+    if (left <= 0) finish();
+  }
+  function nextItem() {
+    st.item = makeSortItem(); st.done++;
+    document.getElementById("it").innerHTML = st.item.text;
+    document.getElementById("no").textContent = "#" + st.done;
+    $app.querySelectorAll(".sortbtn").forEach(b => b.classList.remove("right", "wrong"));
+    st.locked = false;
+  }
+  function answer(b) {
+    if (st.locked) return;
+    st.locked = true;
+    const ok = b.dataset.b === st.item.bin;
+    if (ok) { st.streak++; st.score += st.streak >= 5 ? 2 : 1; b.classList.add("right"); document.getElementById("why").innerHTML = "✅ " + st.item.why; }
+    else {
+      st.streak = 0; st.end -= 3000; b.classList.add("wrong");
+      $app.querySelector(`.sortbtn[data-b="${st.item.bin}"]`).classList.add("right");
+      document.getElementById("why").innerHTML = "❌ " + st.item.why;
+    }
+    document.getElementById("sc").textContent = "✔ " + st.score;
+    document.getElementById("sk").textContent = "🔥 " + st.streak;
+    setTimeout(() => { if (timerId) nextItem(); }, ok ? 450 : 1500);
+  }
+  function finish() {
+    stopTimer();
+    const best = st.score > S.sorter;
+    if (best) S.sorter = st.score;
+    save();
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>🎚️ Threshold Sorter</h2></div>
+      <div class="card result">
+        <div class="big">${st.score}</div>
+        <p>${best ? "New best!" : `Best ${S.sorter}`}</p>
+        <div class="misslist">
+          <div class="miss"><b>The rules you just used</b>
+          • Form P/R: RM200,001.00 or more, one form per transaction<br>
+          • BP/BR: RM10,001.00 to RM200,000.99, monthly, per currency and country<br>
+          • Statement M: below RM10,001.00, foreign workers staying 1 year or more, or Malaysians working abroad<br>
+          • OP/OR: below RM10,001.00 (71100); FI-to-NR-FI FX (71300) and money market of 31 days or less (71200), whatever the amount
+          <div class="ref">📘 Part C 3.1, 3.2(e), 3.3 Table 1, 3.14</div></div>
+        </div>
+        <button class="btn gold" id="again">Sort again</button>
+        <button class="btn ghost" id="out">Home</button>
+      </div>`;
+    document.getElementById("bk").onclick = home;
+    document.getElementById("out").onclick = home;
+    document.getElementById("again").onclick = sorter;
+  }
+}
+
+// ================= RECONCILE STATEMENT E =================
+function makeStatementE() {
+  const r = () => rnd(1, 90) * 10;
+  const d = {
+    open: rnd(80, 400) * 10,
+    pc: r(), pi: pick([0, 0, r()]), bpc: r(), bpi: pick([0, r()]),
+    rc: r(), ri: pick([0, 0, r()]), brc: r(), bri: pick([0, r()]),
+    op: [["71100", r(), r()], ["71200", r(), r()], [pick(["71400", "73310", "73320"]), r(), r()]],
+    khas: r(), od: r()
+  };
+  d.credit = d.pc + d.pi + d.bpc + d.bpi;
+  d.debit = d.rc + d.ri + d.brc + d.bri;
+  d.opNet = d.op.reduce((t, x) => t + x[1] - x[2], 0);
+  d.close = d.open + d.credit - d.debit + d.opNet;
+  if (d.close < 0) { d.open += -d.close + 200; d.close = d.open + d.credit - d.debit + d.opNet; }
+  return d;
+}
+function recon() {
+  stopTimer();
+  const st = { round: 0, right: 0 };
+  intro();
+  function intro() {
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>📒 Reconcile Statement E</h2></div>
+      <div class="card">
+        <p class="scene">The system will check your External Account statement against everything you reported this month.</p>
+        <p class="howto">5 statements. For each one, work out the closing balance the <b>system expects</b>:<br>
+        <span class="mono" style="font-size:13px">Opening + Credit entries − Debit entries + OP − OR</span><br>
+        Remember: in Statement E, Resident <b>payments</b> credit the External Account and <b>receipts</b> debit it. Memorandum items do not change the balance. Some rounds ask for the discrepancy instead.</p>
+        <button class="btn gold" id="go">Open the ledger</button>
+      </div>`;
+    document.getElementById("bk").onclick = home;
+    document.getElementById("go").onclick = round;
+  }
+  function round() {
+    if (st.round >= 5) return end();
+    const d = makeStatementE();
+    const askDisc = st.round >= 2 && Math.random() < 0.5;
+    const reported = askDisc ? d.close + pick([-1, 1]) * rnd(1, 30) * 10 : null;
+    const answer = askDisc ? reported - d.close : d.close;
+    const row = (l, v, cls = "") => `<tr class="${cls}"><td>${l}</td><td>${v === null ? "?" : fmtN(v)}</td></tr>`;
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>📒 Reconcile Statement E</h2><span class="pill">${st.round + 1}/5</span></div>
+      <div class="card">
+        <table class="stmt">
+          ${row("Opening balance at beginning of month", d.open)}
+          <tr class="h"><td colspan="2">(+) Credit entry</td></tr>
+          ${row("Payments (complete)", d.pc)}${row("Payments (incomplete, incl. partials)", d.pi)}
+          ${row("Bulk payments (complete)", d.bpc)}${row("Bulk payments (incomplete, incl. partials)", d.bpi)}
+          <tr class="h"><td colspan="2">(−) Debit entry</td></tr>
+          ${row("Receipts (complete)", d.rc)}${row("Receipts (incomplete, incl. partials)", d.ri)}
+          ${row("Bulk receipts (complete)", d.brc)}${row("Bulk receipts (incomplete, incl. partials)", d.bri)}
+          <tr class="h"><td colspan="2">Other transactions (OP credit / OR debit)</td></tr>
+          ${d.op.map(x => `<tr><td>${x[0]}: OP ${fmtN(x[1])} / OR ${fmtN(x[2])}</td><td>${(x[1] - x[2] >= 0 ? "+" : "") + fmtN(x[1] - x[2])}</td></tr>`).join("")}
+          ${askDisc ? row("Closing balance (from your records)", reported) : ""}
+          <tr class="h"><td colspan="2">Memorandum items</td></tr>
+          ${row("Current account debit balance", d.od, "memo")}
+          ${row("“KHAS” transactions", d.khas, "memo")}
+        </table>
+        <p class="scene" style="margin:14px 0 0">${askDisc ? "What discrepancy will the system show? (reported minus expected; use − if negative)" : "What closing balance does the system expect?"}</p>
+        <input class="inp" id="ans" inputmode="numeric" placeholder="${askDisc ? "e.g. -120" : "e.g. 1,520"}" autocomplete="off">
+        <button class="btn" id="chk">Check</button>
+        <div id="after"></div>
+      </div>`;
+    document.getElementById("bk").onclick = home;
+    const inp = document.getElementById("ans");
+    inp.focus({ preventScroll: true });
+    const check = () => {
+      const raw = inp.value.replace(/[,\sRMrm]/g, "").replace("−", "-");
+      if (raw === "" || isNaN(+raw)) { toast("Type a number first."); return; }
+      const ok = +raw === answer;
+      if (ok) st.right++;
+      inp.disabled = true;
+      document.getElementById("chk").classList.add("hidden");
+      const work = `${fmtN(d.open)} + ${fmtN(d.credit)} − ${fmtN(d.debit)} ${d.opNet >= 0 ? "+" : "−"} ${fmtN(Math.abs(d.opNet))} = <b>${fmtN(d.close)}</b>`;
+      document.getElementById("after").innerHTML = `
+        <div class="fb ${ok ? "ok" : "no"}"><h4>${ok ? "✅ Balanced" : "❌ The system disagrees"}</h4>
+        Expected closing: ${work}${askDisc ? `<br>Discrepancy = reported ${fmtN(reported)} − expected ${fmtN(d.close)} = <b>${fmtN(answer)}</b>. The closing balance must come from your records, so find the missing entry. Never plug the gap with OP/OR.` : ""}
+        <br>The Khas (${fmtN(d.khas)}) and overdraft (${fmtN(d.od)}) memorandum items are <b>not</b> part of the calculation. Incomplete and partial lines <b>are</b>.
+        <div class="ref">Part C 3.15(d)–(e)</div></div>
+        <button class="btn" id="nx">${st.round === 4 ? "Finish" : "Next statement →"}</button>`;
+      st.round++;
+      document.getElementById("nx").onclick = round;
+      document.getElementById("nx").scrollIntoView({ behavior: "smooth", block: "end" });
+    };
+    document.getElementById("chk").onclick = check;
+    inp.onkeydown = e => { if (e.key === "Enter") check(); };
+  }
+  function end() {
+    const best = st.right > S.recon;
+    if (best) S.recon = st.right;
+    save();
+    $app.innerHTML = `
+      <div class="bar"><button class="back" id="bk">‹</button><h2>📒 Reconcile Statement E</h2></div>
+      <div class="card result">
+        <div class="big">${st.right}/5</div>
+        <p>${best ? "New best!" : `Best ${S.recon}/5`}</p>
+        <p style="margin-top:10px;color:var(--ink)">${st.right === 5 ? "Zero discrepancies. The Bank has nothing to ask." : "Each discrepancy means finding the missing entry. OP/OR can never be a balancing item."}</p>
+        <button class="btn gold" id="again">Reconcile again</button>
+        <button class="btn ghost" id="out">Home</button>
+      </div>`;
+    document.getElementById("bk").onclick = home;
+    document.getElementById("out").onclick = home;
+    document.getElementById("again").onclick = recon;
+  }
+}
+
+home();
+</script>
+</body>
+</html>

@@ -64,3 +64,28 @@ A learning app in `taekwondo/index.html` for kids who are starting taekwondo. It
 - Options: slow voice, start again. Progress is saved on the phone.
 
 Play it at `/taekwondo/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/taekwondo/
+
+---
+
+# BOP Desk
+
+A study game in `cbop/index.html` for BNM's policy document *External Sector Statistics (ESS) System – Submission of International Transactions and External Position Information* (BNM/RH/PD 028-58, issued 22 June 2026, effective 1 September 2026). You play a new ESS Officer, and the cases are built around the fine distinctions in the rules, not just the headline facts.
+
+- **🗂️ Career: 14 desks**: 180 cases covering Parts A–J. Every answer explains why and gives the paragraph reference. Cases marked 🪤 are built around common mistakes, for example:
+  - FC between banks: the bank with the Resident reports. Ringgit between banks: the bank with the Non-resident raises the partial.
+  - Same-bank FC deals are Khas, but same-bank ringgit deals are not.
+  - When a Resident buys a Resident company's shares from a Non-resident, it is 35200 *liquidation*, with R1 being the company whose shares were sold.
+  - Short-term workers do not go on Statement M.
+  - The UBO RM1m threshold is per depositor, not per account.
+  - FCP and NR-to-NR amendments need the HOR *and* an independent reviewer.
+  - An AOO's dealing type is recorded from the AOO's side.
+- **⚡ Month-End Rush**: 20 mixed cases, 25 seconds each, with streak bonuses. Three wrong or late answers count as BNM prompt letters, and the report becomes a "non-submission".
+- **🎚️ Threshold Sorter**: 60 seconds of sorting tickets into Form P/R, BP/BR, Statement M or OP/OR, including the edge amounts (RM10,000.99 / RM10,001.00 / RM200,000.99 / RM200,001.00), 31- vs 32-day placements and FX between financial institutions.
+- **📒 Reconcile E**: 5 randomly generated Statement E ledgers. Work out the closing balance the system expects, or the discrepancy, without counting the memorandum items.
+- **🔁 Review mistakes**: every case you get wrong is saved, and leaves the list once you get it right.
+- Stars and ranks (Trainee Clerk → Head of Reporting) and best scores are saved on the device.
+- The cases are in `cbop/cases.js`, so you can edit or add cases without touching the game code.
+
+For study only. The policy document is the authority.
+
+Play it at `/cbop/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/cbop/
