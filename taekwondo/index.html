@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Jom Taekwondo</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jom TKD">
+<meta name="theme-color" content="#c8102e">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Noto+Sans+KR:wght@700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --red: #c8102e;
+    --red-dark: #8f0b20;
+    --blue: #1d4f9c;
+    --blue-dark: #12356b;
+    --bg: #fbf6ee;
+    --ink: #1f2430;
+    --muted: #6a6f7c;
+    --card: #ffffff;
+    --line: #ece3d4;
+    --right: #2fbf5f;
+    --wrong: #ef5a5a;
+    --gold: #ffc23d;
+    --top: env(safe-area-inset-top);
+    --bottom: env(safe-area-inset-bottom);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    color: var(--ink);
+    font-family: "Baloo 2", system-ui, -apple-system, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  body {
+    background:
+      radial-gradient(circle at 92% 6%, #ffd9dc 0 70px, transparent 71px),
+      radial-gradient(circle at 6% 94%, #d8e5ff 0 90px, transparent 91px),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .ko { font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif; font-weight: 700; }
+  .screen {
+    display: none;
+    min-height: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: calc(var(--top) + 14px) 16px calc(var(--bottom) + 18px);
+    flex-direction: column;
+  }
+  .screen.on { display: flex; }
+
+  /* ---------- Top bar ---------- */
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .bar h2 { margin: 0; font-size: 22px; flex: 1; line-height: 1.1; }
+  .back {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: 0 2px 0 var(--line);
+    font-size: 22px;
+    flex: none;
+  }
+  .pill {
+    background: var(--card);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-weight: 700;
+    box-shadow: 0 2px 0 var(--line);
+    white-space: nowrap;
+  }
+
+  /* ---------- Home ---------- */
+  .logo { text-align: center; margin: 4px 0 6px; }
+  .taeguk { width: 84px; height: 84px; display: block; margin: 0 auto 2px; }
+  .logo h1 { margin: 0; font-size: 32px; font-weight: 800; line-height: 1.1; }
+  .logo p { margin: 0; color: var(--muted); }
+
+  .beltcard {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 12px 14px;
+    box-shadow: 0 3px 0 var(--line);
+    margin: 10px 0 14px;
+  }
+  .beltrow { display: flex; align-items: center; gap: 12px; }
+  .beltrow svg { width: 86px; height: 40px; flex: none; }
+  .beltrow b { font-size: 19px; display: block; line-height: 1.1; }
+  .beltrow span { color: var(--muted); font-size: 14px; }
+  .xpbar {
+    height: 12px;
+    border-radius: 999px;
+    background: #f1ebe0;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .xpbar i {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--red), var(--blue));
+    border-radius: inherit;
+    transition: width .4s;
+  }
+
+  .menu { display: grid; gap: 12px; }
+  .menu button {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 20px;
+    color: #fff;
+    box-shadow: 0 5px 0 rgba(0,0,0,.18);
+  }
+  .menu button:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  .menu .ic { font-size: 34px; width: 44px; text-align: center; flex: none; }
+  .menu b { font-size: 21px; display: block; line-height: 1.1; }
+  .menu small { opacity: .9; font-size: 14px; line-height: 1.2; display: block; }
+  .m-learn { background: var(--blue); }
+  .m-quiz { background: #7a3fb0; }
+  .m-reflex { background: var(--red); }
+  .m-poomsae { background: #1c8a6a; }
+  .m-belt { background: #3a3f4c; }
+
+  .opts {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    margin-top: 16px;
+  }
+  .opts button {
+    background: var(--card);
+    border-radius: 999px;
+    padding: 6px 14px;
+    box-shadow: 0 2px 0 var(--line);
+    font-size: 15px;
+  }
+  .note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.35; }
+
+  /* ---------- Learn ---------- */
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cats button {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 14px 10px;
+    box-shadow: 0 3px 0 var(--line);
+    text-align: center;
+  }
+  .cats .ic { font-size: 34px; display: block; }
+  .cats b { display: block; font-size: 17px; line-height: 1.15; }
+  .cats small { color: var(--muted); }
+
+  .flash {
+    background: var(--card);
+    border-radius: 26px;
+    box-shadow: 0 5px 0 var(--line);
+    padding: 18px 18px 20px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 330px;
+  }
+  .flash .big-ic { font-size: 54px; line-height: 1; }
+  .flash .ko { font-size: 40px; margin: 8px 0 0; line-height: 1.2; }
+  .flash .rom { font-size: 28px; font-weight: 800; color: var(--red); line-height: 1.1; }
+  .flash .ms { font-size: 21px; font-weight: 700; margin-top: 4px; }
+  .flash .how {
+    margin-top: 12px;
+    background: #f6f1e7;
+    border-radius: 16px;
+    padding: 10px 12px;
+    font-size: 15.5px;
+    line-height: 1.4;
+    text-align: left;
+  }
+  .flash .how:empty { display: none; }
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .row button { flex: 1; }
+  .btn {
+    padding: 13px 10px;
+    border-radius: 16px;
+    font-weight: 800;
+    font-size: 18px;
+    background: var(--card);
+    box-shadow: 0 4px 0 var(--line);
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--line); }
+  .btn.red { background: var(--red); color: #fff; box-shadow: 0 4px 0 var(--red-dark); }
+  .btn.blue { background: var(--blue); color: #fff; box-shadow: 0 4px 0 var(--blue-dark); }
+  .counter { text-align: center; color: var(--muted); margin-top: 8px; }
+
+  /* ---------- Quiz & reflex ---------- */
+  .q {
+    background: var(--card);
+    border-radius: 24px;
+    box-shadow: 0 5px 0 var(--line);
+    padding: 18px;
+    text-align: center;
+    min-height: 170px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  }
+  .q .hint { color: var(--muted); font-size: 15px; }
+  .q .ko { font-size: 36px; line-height: 1.2; }
+  .q .rom { font-size: 26px; font-weight: 800; color: var(--red); line-height: 1.15; }
+  .q .ms { font-size: 24px; font-weight: 800; line-height: 1.2; }
+  .q .speaker { font-size: 60px; background: none; }
+  .answers { display: grid; gap: 10px; margin-top: 14px; }
+  .answers.two { grid-template-columns: 1fr 1fr; }
+  .answers button {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 12px 10px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+    box-shadow: 0 4px 0 var(--line);
+    min-height: 62px;
+  }
+  .answers button .sub { display: block; font-size: 14px; color: var(--muted); font-weight: 500; }
+  .answers button.right { background: var(--right); color: #fff; box-shadow: 0 4px 0 #1f8a43; }
+  .answers button.right .sub { color: #e8ffef; }
+  .answers button.wrong { background: var(--wrong); color: #fff; box-shadow: 0 4px 0 #b83a3a; }
+  .answers button:disabled { cursor: default; }
+  .progress {
+    height: 10px; border-radius: 999px; background: #efe7da; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress i { display: block; height: 100%; background: #7a3fb0; transition: width .3s; }
+
+  .timer {
+    height: 14px; border-radius: 999px; background: #efe7da; overflow: hidden; margin-bottom: 12px;
+  }
+  .timer i { display: block; height: 100%; width: 100%; background: var(--red); transform-origin: left; }
+  .hearts { font-size: 22px; letter-spacing: 2px; }
+  .coach {
+    font-size: 15px; color: var(--muted); margin-bottom: 4px;
+  }
+  .reflex-go {
+    margin: auto 0;
+    text-align: center;
+  }
+  .reflex-go .big { font-size: 80px; }
+  .shake { animation: shake .3s; }
+  @keyframes shake {
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .pop { animation: pop .35s; }
+  @keyframes pop {
+    50% { transform: scale(1.06); }
+  }
+
+  /* ---------- Result ---------- */
+  .result { text-align: center; margin: auto 0; }
+  .result .big { font-size: 80px; line-height: 1; }
+  .result h2 { margin: 10px 0 0; font-size: 30px; }
+  .result p { color: var(--muted); font-size: 18px; margin: 4px 0 0; }
+  .result .btns { display: grid; gap: 10px; margin-top: 22px; }
+
+  /* ---------- Poomsae ---------- */
+  .pattern {
+    background: var(--card);
+    border-radius: 22px;
+    box-shadow: 0 4px 0 var(--line);
+    padding: 8px;
+  }
+  .pattern svg { width: 100%; height: auto; display: block; max-height: 36vh; }
+  .step {
+    background: var(--card);
+    border-radius: 22px;
+    box-shadow: 0 4px 0 var(--line);
+    padding: 12px 16px;
+    margin-top: 12px;
+    text-align: center;
+  }
+  .step .num { font-weight: 800; color: var(--muted); }
+  .step .rom { font-size: 22px; font-weight: 800; color: var(--red); line-height: 1.15; }
+  .step .ko { font-size: 20px; color: var(--blue); }
+  .step .ms { font-size: 16px; line-height: 1.4; margin-top: 4px; }
+  .kihap {
+    display: inline-block; background: var(--gold); border-radius: 999px; padding: 0 10px;
+    font-weight: 800; margin-top: 4px;
+  }
+
+  /* ---------- Belts ---------- */
+  .belts { display: grid; gap: 10px; }
+  .belts .b {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 10px 14px;
+    box-shadow: 0 3px 0 var(--line);
+  }
+  .belts .b svg { width: 80px; height: 36px; flex: none; }
+  .belts .b.lock { opacity: .45; }
+  .belts .b b { display: block; font-size: 18px; line-height: 1.1; }
+  .belts .b span { color: var(--muted); font-size: 14px; line-height: 1.3; display: block; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    left: 50%; top: calc(var(--top) + 16px);
+    transform: translate(-50%, -150%);
+    background: var(--ink);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    transition: transform .3s;
+    z-index: 9;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.on { transform: translate(-50%, 0); }
+
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(20,20,30,.55);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .modal.on { display: flex; }
+  .modal .box {
+    background: var(--card);
+    border-radius: 26px;
+    padding: 22px;
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+    animation: pop .5s;
+  }
+  .modal .box svg { width: 160px; height: 70px; }
+  .modal h3 { margin: 6px 0 0; font-size: 26px; }
+  .modal p { margin: 4px 0 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ===================== HOME ===================== -->
+<section class="screen on" id="home">
+  <div class="logo">
+    <svg class="taeguk" viewBox="-50 -50 100 100" aria-hidden="true">
+      <circle r="48" fill="#fff" stroke="#e6dccb" stroke-width="2"/>
+      <g transform="rotate(-25)">
+        <circle r="40" fill="#1d4f9c"/>
+        <path d="M-40 0A40 40 0 0 1 40 0A20 20 0 0 1 0 0A20 20 0 0 0-40 0Z" fill="#c8102e"/>
+      </g>
+    </svg>
+    <h1>Jom Taekwondo</h1>
+    <p><span class="ko">태권도</span> · belajar istilah, teknik &amp; poomsae</p>
+  </div>
+
+  <div class="beltcard" id="beltCard"></div>
+
+  <div class="menu">
+    <button class="m-learn" data-go="learn">
+      <span class="ic">📖</span>
+      <span><b>Belajar</b><small>Kad istilah Korea: kiraan, arahan, kuda-kuda, tangkisan, tumbukan, tendangan</small></span>
+    </button>
+    <button class="m-quiz" data-go="quizPick">
+      <span class="ic">❓</span>
+      <span><b>Kuiz</b><small>10 soalan. Jawab betul untuk dapat mata &amp; naik tali pinggang</small></span>
+    </button>
+    <button class="m-reflex" data-go="reflex">
+      <span class="ic">⚡</span>
+      <span><b>Arahan Sabeomnim</b><small>Jurulatih jerit arahan, kamu tekan jawapan secepat mungkin!</small></span>
+    </button>
+    <button class="m-poomsae" data-go="poomsae">
+      <span class="ic">🥋</span>
+      <span><b>Poomsae Taegeuk Il Jang</b><small>18 gerakan, langkah demi langkah dengan peta lantai</small></span>
+    </button>
+    <button class="m-belt" data-go="belts">
+      <span class="ic">🏅</span>
+      <span><b>Tali Pinggang Saya</b><small>Lihat semua tahap dari putih hingga hitam</small></span>
+    </button>
+  </div>
+
+  <div class="opts">
+    <button id="optSlow">🐢 Suara perlahan: <b>Tidak</b></button>
+    <button id="optReset">🗑️ Mula semula</button>
+  </div>
+  <p class="note" id="voiceNote"></p>
+</section>
+
+<!-- ===================== LEARN: categories ===================== -->
+<section class="screen" id="learn">
+  <div class="bar"><button class="back" data-go="home">←</button><h2>📖 Belajar</h2></div>
+  <div class="cats" id="catGrid"></div>
+</section>
+
+<!-- ===================== LEARN: cards ===================== -->
+<section class="screen" id="cards">
+  <div class="bar"><button class="back" data-go="learn">←</button><h2 id="cardsTitle"></h2></div>
+  <div class="flash" id="flash">
+    <div class="big-ic" id="fIc"></div>
+    <div class="ko" id="fKo"></div>
+    <div class="rom" id="fRom"></div>
+    <div class="ms" id="fMs"></div>
+    <div class="how" id="fHow"></div>
+  </div>
+  <div class="row">
+    <button class="btn" id="fPrev">◀</button>
+    <button class="btn red" id="fSay">🔊 Dengar</button>
+    <button class="btn" id="fNext">▶</button>
+  </div>
+  <div class="counter" id="fCount"></div>
+</section>
+
+<!-- ===================== QUIZ: pick ===================== -->
+<section class="screen" id="quizPick">
+  <div class="bar"><button class="back" data-go="home">←</button><h2>❓ Pilih Kuiz</h2></div>
+  <div class="cats" id="quizGrid"></div>
+</section>
+
+<!-- ===================== QUIZ ===================== -->
+<section class="screen" id="quiz">
+  <div class="bar"><button class="back" data-go="quizPick">←</button><h2 id="quizTitle">Kuiz</h2><span class="pill" id="quizScore">0</span></div>
+  <div class="progress"><i id="quizProg"></i></div>
+  <div class="q" id="quizQ"></div>
+  <div class="answers" id="quizA"></div>
+</section>
+
+<!-- ===================== REFLEX ===================== -->
+<section class="screen" id="reflex">
+  <div class="bar"><button class="back" data-go="home">←</button><h2>⚡ Arahan</h2><span class="hearts" id="rHearts"></span><span class="pill" id="rScore">0</span></div>
+  <div id="rIntro" class="reflex-go">
+    <div class="big">🧑‍🏫</div>
+    <h2 style="margin:6px 0 0">Sedia, murid!</h2>
+    <p style="color:var(--muted);font-size:17px;margin:6px 0 18px;line-height:1.4">
+      Sabeomnim akan sebut arahan dalam bahasa Korea.<br>
+      Tekan maksudnya sebelum masa tamat.<br>
+      Makin lama, makin laju. Ada 3 nyawa ❤️
+    </p>
+    <button class="btn red" id="rStart" style="width:100%">준비… 시작! (Mula)</button>
+    <p class="note" id="rBest"></p>
+  </div>
+  <div id="rPlay" style="display:none">
+    <div class="timer"><i id="rTimer"></i></div>
+    <div class="q" id="rQ"></div>
+    <div class="answers two" id="rA"></div>
+  </div>
+</section>
+
+<!-- ===================== POOMSAE ===================== -->
+<section class="screen" id="poomsae">
+  <div class="bar"><button class="back" data-go="home">←</button><h2>🥋 Taegeuk Il Jang</h2></div>
+  <div class="pattern"><svg id="pSvg" viewBox="-3.4 -5 6.8 6"></svg></div>
+  <div class="step" id="pStep"></div>
+  <div class="row">
+    <button class="btn" id="pPrev">◀</button>
+    <button class="btn blue" id="pPlay">▶ Main</button>
+    <button class="btn" id="pNext">▶</button>
+  </div>
+  <p class="note">Mula di titik ⭐ menghadap ke depan (atas). Anak panah menunjuk arah kamu menghadap.<br>Mula dengan <b>Charyeot · Kyeongnye · Junbi</b>, tamat dengan <b>Baro</b>.</p>
+</section>
+
+<!-- ===================== BELTS ===================== -->
+<section class="screen" id="belts">
+  <div class="bar"><button class="back" data-go="home">←</button><h2>🏅 Tali Pinggang</h2></div>
+  <div class="belts" id="beltList"></div>
+  <p class="note">Dalam aplikasi ini, mata dikumpul daripada Kuiz dan Arahan Sabeomnim.<br>Di dojang sebenar, kenaikan tali pinggang ditentukan oleh jurulatih melalui ujian (gup).</p>
+</section>
+
+<!-- ===================== RESULT ===================== -->
+<section class="screen" id="result">
+  <div class="result">
+    <div class="big" id="resIc">🏆</div>
+    <h2 id="resTitle"></h2>
+    <p id="resText"></p>
+    <div class="btns">
+      <button class="btn red" id="resAgain">🔁 Main lagi</button>
+      <button class="btn" data-go="home">🏠 Menu utama</button>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="beltModal">
+  <div class="box">
+    <div id="bmBelt"></div>
+    <h3 id="bmTitle"></h3>
+    <p id="bmText"></p>
+    <button class="btn red" id="bmOk" style="width:100%">감사합니다! (Terima kasih)</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+   Content
+   ko: Hangul (also what the Korean voice reads)
+   rom: romanisation, ms: Malay meaning, how: how to do it
+   ========================================================= */
+const CATS = [
+  { id: "kira",     ic: "🔢", name: "Kiraan 1–10",       sub: "Hana, dul, set…" },
+  { id: "arahan",   ic: "📣", name: "Arahan Dojang",     sub: "Charyeot, junbi…" },
+  { id: "dojang",   ic: "🏠", name: "Di Dojang",         sub: "Dobok, tti, sabeomnim" },
+  { id: "badan",    ic: "🎯", name: "Sasaran Badan",     sub: "Eolgul, momtong, arae" },
+  { id: "seogi",    ic: "🧍", name: "Kuda-kuda (Seogi)", sub: "Cara berdiri" },
+  { id: "makki",    ic: "🛡️", name: "Tangkisan (Makki)", sub: "Menghalang serangan" },
+  { id: "jireugi",  ic: "👊", name: "Tumbukan & Pukulan", sub: "Jireugi, chigi" },
+  { id: "chagi",    ic: "🦵", name: "Tendangan (Chagi)", sub: "Ap, dollyeo, yeop…" },
+  { id: "semangat", ic: "💖", name: "Semangat Taekwondo", sub: "5 prinsip murid" },
+];
+
+const TERMS = [
+  // ---- counting (native Korean numbers used in the dojang)
+  { cat: "kira", ic: "1️⃣", ko: "하나", rom: "Hana", ms: "Satu" },
+  { cat: "kira", ic: "2️⃣", ko: "둘", rom: "Dul", ms: "Dua" },
+  { cat: "kira", ic: "3️⃣", ko: "셋", rom: "Set", ms: "Tiga" },
+  { cat: "kira", ic: "4️⃣", ko: "넷", rom: "Net", ms: "Empat" },
+  { cat: "kira", ic: "5️⃣", ko: "다섯", rom: "Daseot", ms: "Lima" },
+  { cat: "kira", ic: "6️⃣", ko: "여섯", rom: "Yeoseot", ms: "Enam" },
+  { cat: "kira", ic: "7️⃣", ko: "일곱", rom: "Ilgop", ms: "Tujuh" },
+  { cat: "kira", ic: "8️⃣", ko: "여덟", rom: "Yeodeol", ms: "Lapan" },
+  { cat: "kira", ic: "9️⃣", ko: "아홉", rom: "Ahop", ms: "Sembilan" },
+  { cat: "kira", ic: "🔟", ko: "열", rom: "Yeol", ms: "Sepuluh" },
+
+  // ---- commands
+  { cat: "arahan", ic: "🧍", ko: "차렷", rom: "Charyeot", ms: "Sedia / Tegak", how: "Berdiri tegak, kaki rapat, tangan lurus di sisi badan. Mata pandang ke depan." },
+  { cat: "arahan", ic: "🙇", ko: "경례", rom: "Kyeongnye", ms: "Tunduk hormat", how: "Dari Charyeot, tunduk kira-kira 30° sambil mata pandang ke bawah. Tanda hormat kepada jurulatih dan rakan." },
+  { cat: "arahan", ic: "✊", ko: "준비", rom: "Junbi", ms: "Bersedia", how: "Langkah kaki kiri ke tepi (selebar bahu). Kepal kedua-dua tangan di depan perut, sejengkal dari tali pinggang." },
+  { cat: "arahan", ic: "🚦", ko: "시작", rom: "Sijak", ms: "Mula", how: "Mulakan gerakan atau latihan." },
+  { cat: "arahan", ic: "↩️", ko: "바로", rom: "Baro", ms: "Kembali", how: "Kembali ke kedudukan Junbi (bersedia) selepas habis gerakan." },
+  { cat: "arahan", ic: "✋", ko: "그만", rom: "Geuman", ms: "Berhenti", how: "Berhenti serta-merta. Selalunya digunakan semasa sparring." },
+  { cat: "arahan", ic: "😤", ko: "기합", rom: "Kihap", ms: "Jeritan semangat", how: "Jerit kuat dari perut (contoh: \"Hiyaa!\") ketika membuat teknik untuk kuatkan tenaga dan semangat." },
+  { cat: "arahan", ic: "😌", ko: "쉬어", rom: "Swieo", ms: "Rehat / Senang diri", how: "Rehat sekejap di tempat masing-masing." },
+  { cat: "arahan", ic: "🔄", ko: "뒤로 돌아", rom: "Dwiro dora", ms: "Pusing ke belakang", how: "Pusing badan 180° untuk menghadap ke belakang." },
+  { cat: "arahan", ic: "🙏", ko: "감사합니다", rom: "Gamsahamnida", ms: "Terima kasih", how: "Ucapkan selepas kelas atau selepas jurulatih mengajar." },
+
+  // ---- in the dojang
+  { cat: "dojang", ic: "🏠", ko: "도장", rom: "Dojang", ms: "Tempat latihan", how: "Tanggalkan kasut dan tunduk hormat semasa masuk dan keluar dojang." },
+  { cat: "dojang", ic: "🥋", ko: "도복", rom: "Dobok", ms: "Baju taekwondo", how: "Pakai dobok yang bersih dan kemas setiap kali latihan." },
+  { cat: "dojang", ic: "🎗️", ko: "띠", rom: "Tti", ms: "Tali pinggang", how: "Warna tali pinggang menunjukkan tahap murid." },
+  { cat: "dojang", ic: "🧑‍🏫", ko: "사범님", rom: "Sabeomnim", ms: "Jurulatih / Guru", how: "Panggilan hormat untuk jurulatih bertali pinggang hitam." },
+  { cat: "dojang", ic: "👑", ko: "관장님", rom: "Gwanjangnim", ms: "Ketua dojang", how: "Panggilan hormat untuk pemilik atau ketua dojang." },
+  { cat: "dojang", ic: "🧒", ko: "제자", rom: "Jeja", ms: "Murid", how: "Murid yang belajar dengan jurulatih." },
+  { cat: "dojang", ic: "🥊", ko: "겨루기", rom: "Gyeorugi", ms: "Sparring / Bertarung", how: "Latihan bertarung dengan pasangan sambil memakai pelindung." },
+  { cat: "dojang", ic: "📜", ko: "품새", rom: "Poomsae", ms: "Jurus / Bunga", how: "Satu siri gerakan tangkisan, tumbukan dan tendangan mengikut corak tertentu." },
+  { cat: "dojang", ic: "🪵", ko: "격파", rom: "Gyeokpa", ms: "Memecah papan", how: "Menguji kekuatan dan ketepatan dengan memecahkan papan." },
+
+  // ---- target areas
+  { cat: "badan", ic: "😀", ko: "얼굴", rom: "Eolgul", ms: "Muka (aras atas)", how: "Sasaran aras atas: kepala dan muka." },
+  { cat: "badan", ic: "👕", ko: "몸통", rom: "Momtong", ms: "Badan (aras tengah)", how: "Sasaran aras tengah: dada dan perut." },
+  { cat: "badan", ic: "👖", ko: "아래", rom: "Arae", ms: "Bawah (aras bawah)", how: "Sasaran aras bawah: di bawah pinggang." },
+  { cat: "badan", ic: "✋", ko: "손", rom: "Son", ms: "Tangan" },
+  { cat: "badan", ic: "🦶", ko: "발", rom: "Bal", ms: "Kaki" },
+  { cat: "badan", ic: "🔪", ko: "손날", rom: "Sonnal", ms: "Sisi tapak tangan", how: "Bahagian tepi tapak tangan (sebelah jari kelingking), seperti mata pisau." },
+  { cat: "badan", ic: "👊", ko: "주먹", rom: "Jumeok", ms: "Penumbuk", how: "Lipat jari rapat-rapat, ibu jari di luar menekan jari telunjuk dan jari tengah." },
+
+  // ---- stances
+  { cat: "seogi", ic: "🧍", ko: "나란히서기", rom: "Naranhi seogi", ms: "Kuda-kuda selari", how: "Kaki selebar bahu, kedua-dua kaki lurus ke depan. Ini kedudukan Junbi." },
+  { cat: "seogi", ic: "🚶", ko: "앞서기", rom: "Ap seogi", ms: "Kuda-kuda berjalan", how: "Seperti satu langkah biasa ke depan. Kaki depan lurus, berat badan sama rata. Lutut tidak dibengkokkan." },
+  { cat: "seogi", ic: "🏃", ko: "앞굽이", rom: "Ap kubi", ms: "Kuda-kuda depan", how: "Langkah panjang. Lutut depan bengkok sehingga menutup jari kaki, kaki belakang lurus. 2/3 berat di kaki depan." },
+  { cat: "seogi", ic: "🧘", ko: "뒷굽이", rom: "Dwit kubi", ms: "Kuda-kuda belakang", how: "Kaki membentuk huruf L. Lutut belakang bengkok, 2/3 berat di kaki belakang." },
+  { cat: "seogi", ic: "🐴", ko: "주춤서기", rom: "Juchum seogi", ms: "Kuda-kuda menunggang kuda", how: "Kaki terbuka luas (dua kali lebar bahu), lutut bengkok seperti duduk atas kuda. Belakang lurus." },
+  { cat: "seogi", ic: "🐯", ko: "범서기", rom: "Beom seogi", ms: "Kuda-kuda harimau", how: "Kaki depan hanya hujung jari menyentuh lantai. Hampir semua berat badan di kaki belakang." },
+  { cat: "seogi", ic: "🦩", ko: "학다리서기", rom: "Hakdari seogi", ms: "Kuda-kuda bangau", how: "Berdiri dengan satu kaki. Kaki satu lagi diletak di tepi lutut kaki yang berdiri." },
+
+  // ---- blocks
+  { cat: "makki", ic: "⬇️", ko: "아래막기", rom: "Arae makki", ms: "Tangkisan bawah", how: "Tangan menyapu dari bahu bertentangan turun ke depan paha, menghalang tendangan ke aras bawah." },
+  { cat: "makki", ic: "➡️", ko: "몸통안막기", rom: "Momtong an makki", ms: "Tangkisan badan dari luar ke dalam", how: "Lengan bergerak dari luar badan ke tengah dada, siku bengkok 90°. Menghalang serangan ke badan." },
+  { cat: "makki", ic: "⬅️", ko: "몸통바깥막기", rom: "Momtong bakkat makki", ms: "Tangkisan badan dari dalam ke luar", how: "Lengan bergerak dari depan perut ke luar badan, siku bengkok." },
+  { cat: "makki", ic: "⬆️", ko: "얼굴막기", rom: "Eolgul makki", ms: "Tangkisan muka (atas)", how: "Lengan naik dan berhenti sejengkal di atas dahi, untuk melindungi kepala." },
+  { cat: "makki", ic: "🔪", ko: "손날막기", rom: "Sonnal makki", ms: "Tangkisan sisi tapak tangan", how: "Tangkisan menggunakan sisi tapak tangan. Selalunya dibuat dalam kuda-kuda belakang." },
+  { cat: "makki", ic: "✂️", ko: "가위막기", rom: "Gawi makki", ms: "Tangkisan gunting", how: "Satu tangan buat tangkisan bawah, satu lagi tangkisan badan dari dalam ke luar, serentak seperti gunting." },
+
+  // ---- punches & strikes
+  { cat: "jireugi", ic: "👊", ko: "몸통지르기", rom: "Momtong jireugi", ms: "Tumbukan badan", how: "Tumbuk lurus ke paras ulu hati. Tangan yang satu lagi tarik ke pinggang." },
+  { cat: "jireugi", ic: "🤜", ko: "바로지르기", rom: "Baro jireugi", ms: "Tumbukan silang", how: "Tumbuk dengan tangan yang bertentangan dengan kaki depan (contoh: kaki kiri depan, tumbuk tangan kanan)." },
+  { cat: "jireugi", ic: "🤛", ko: "반대지르기", rom: "Bandae jireugi", ms: "Tumbukan sebelah sama", how: "Tumbuk dengan tangan yang sama sebelah dengan kaki depan." },
+  { cat: "jireugi", ic: "✌️", ko: "두번지르기", rom: "Dubeon jireugi", ms: "Tumbukan dua kali", how: "Dua tumbukan laju berturut-turut, kiri dan kanan." },
+  { cat: "jireugi", ic: "🔪", ko: "손날목치기", rom: "Sonnal mok chigi", ms: "Pukulan sisi tapak tangan ke leher", how: "Hayun sisi tapak tangan dari luar ke dalam ke paras leher." },
+  { cat: "jireugi", ic: "💪", ko: "팔굽치기", rom: "Palkup chigi", ms: "Pukulan siku", how: "Pukul dengan siku dari jarak dekat." },
+  { cat: "jireugi", ic: "🔨", ko: "메주먹내려치기", rom: "Me jumeok naeryeo chigi", ms: "Pukulan penumbuk tukul ke bawah", how: "Pukul ke bawah dengan bahagian bawah penumbuk, seperti mengetuk dengan tukul." },
+
+  // ---- kicks
+  { cat: "chagi", ic: "🦵", ko: "앞차기", rom: "Ap chagi", ms: "Tendangan depan", how: "Angkat lutut tinggi, kemudian tendang lurus ke depan dengan bebola kaki (bawah jari kaki). Tarik semula kaki." },
+  { cat: "chagi", ic: "🌀", ko: "돌려차기", rom: "Dollyeo chagi", ms: "Tendangan pusing", how: "Angkat lutut, pusing pinggul dan kaki sokongan, tendang dari tepi dengan kekura kaki. Tendangan paling popular dalam pertandingan." },
+  { cat: "chagi", ic: "➡️", ko: "옆차기", rom: "Yeop chagi", ms: "Tendangan sisi", how: "Angkat lutut ke dada, pusingkan badan ke tepi, tolak kaki lurus ke sisi dengan tumit atau sisi tapak kaki." },
+  { cat: "chagi", ic: "🐴", ko: "뒤차기", rom: "Dwi chagi", ms: "Tendangan belakang", how: "Pusing badan ke belakang, pandang sasaran dari atas bahu, tendang lurus ke belakang dengan tumit." },
+  { cat: "chagi", ic: "🪓", ko: "내려차기", rom: "Naeryeo chagi", ms: "Tendangan kapak", how: "Hayun kaki lurus ke atas setinggi mungkin, kemudian hentak turun dengan tumit seperti kapak." },
+  { cat: "chagi", ic: "🌪️", ko: "뒤후려차기", rom: "Dwi huryeo chagi", ms: "Tendangan pusing belakang (sapu)", how: "Pusing badan ke belakang dan sapu kaki lurus dalam bulatan, kena sasaran dengan tumit." },
+  { cat: "chagi", ic: "🫸", ko: "밀어차기", rom: "Mireo chagi", ms: "Tendangan tolak", how: "Tolak lawan ke belakang dengan seluruh tapak kaki, untuk buat jarak." },
+  { cat: "chagi", ic: "🌙", ko: "반달차기", rom: "Bandal chagi", ms: "Tendangan bulan sabit", how: "Separuh antara tendangan depan dan tendangan pusing, kaki bergerak menyerong." },
+  { cat: "chagi", ic: "🦘", ko: "뛰어차기", rom: "Ttwieo chagi", ms: "Tendangan melompat", how: "Melompat dan menendang ketika di udara." },
+
+  // ---- tenets
+  { cat: "semangat", ic: "🙇", ko: "예의", rom: "Ye-ui", ms: "Hormat / Sopan santun", how: "Hormati jurulatih, ibu bapa, rakan dan semua orang." },
+  { cat: "semangat", ic: "🤝", ko: "염치", rom: "Yeomchi", ms: "Jujur / Integriti", how: "Bercakap benar dan tahu membezakan yang betul dengan yang salah." },
+  { cat: "semangat", ic: "🐢", ko: "인내", rom: "Innae", ms: "Tekun / Sabar", how: "Terus berlatih walaupun susah. Jangan cepat putus asa." },
+  { cat: "semangat", ic: "🧘", ko: "극기", rom: "Geukgi", ms: "Kawalan diri", how: "Kawal marah dan tenaga. Taekwondo bukan untuk membuli orang." },
+  { cat: "semangat", ic: "🔥", ko: "백절불굴", rom: "Baekjeol bulgul", ms: "Semangat tidak mudah patah", how: "Jatuh seratus kali, bangun seratus kali! Berani dan tidak mengalah." },
+];
+TERMS.forEach((t, i) => t.id = i);
+
+const BELTS = [
+  { name: "Putih",  xp: 0,    c1: "#ffffff", c2: "#ffffff", note: "Permulaan. Kosong seperti kertas putih, sedia belajar." },
+  { name: "Kuning", xp: 100,  c1: "#ffd21f", c2: "#ffd21f", note: "Benih mula tumbuh. Asas kuda-kuda dan tangkisan." },
+  { name: "Hijau",  xp: 300,  c1: "#2fae4b", c2: "#2fae4b", note: "Tumbuhan membesar. Kemahiran mula berkembang." },
+  { name: "Biru",   xp: 650,  c1: "#1d6fd1", c2: "#1d6fd1", note: "Pokok menjulang ke langit. Teknik makin tinggi." },
+  { name: "Merah",  xp: 1100, c1: "#d4182f", c2: "#d4182f", note: "Bahaya! Perlu kawalan diri yang tinggi." },
+  { name: "Poom / Hitam", xp: 1700, c1: "#d4182f", c2: "#111111", note: "Poom (bawah 15 tahun) separuh merah, separuh hitam." },
+  { name: "Hitam (Dan 1)", xp: 2500, c1: "#111111", c2: "#111111", note: "Tamat asas, kini mula perjalanan sebenar. Tetap rendah diri." },
+];
+
+// Taegeuk Il Jang (태극 1장). x/y = position on the floor map (front is up),
+// face = direction facing (U up/front, D down/back, L left, R right)
+const POOMSAE = [
+  { x: -1, y: 0,  face: "L", ko: "앞서기 아래막기", rom: "Ap seogi · Arae makki", ms: "Pusing ke kiri. Kaki kiri depan dalam kuda-kuda berjalan. Tangkisan bawah tangan kiri." },
+  { x: -2, y: 0,  face: "L", ko: "앞서기 몸통지르기", rom: "Ap seogi · Momtong jireugi", ms: "Langkah kaki kanan ke depan. Tumbukan badan tangan kanan." },
+  { x: 1,  y: 0,  face: "R", ko: "앞서기 아래막기", rom: "Ap seogi · Arae makki", ms: "Pusing 180° ke kanan (kaki kanan bergerak). Kaki kanan depan, tangkisan bawah tangan kanan." },
+  { x: 2,  y: 0,  face: "R", ko: "앞서기 몸통지르기", rom: "Ap seogi · Momtong jireugi", ms: "Langkah kaki kiri ke depan. Tumbukan badan tangan kiri." },
+  { x: 0,  y: -1, face: "U", ko: "앞굽이 아래막기", rom: "Ap kubi · Arae makki", ms: "Pusing ke kiri menghadap depan. Kaki kiri depan dalam kuda-kuda depan. Tangkisan bawah tangan kiri." },
+  { x: 0,  y: -1, face: "U", ko: "몸통바로지르기", rom: "Momtong baro jireugi", ms: "Kekal di tempat. Tumbukan badan tangan kanan." },
+  { x: 1,  y: -2, face: "R", ko: "앞서기 몸통안막기", rom: "Ap seogi · Momtong an makki", ms: "Pusing ke kanan. Kaki kanan depan. Tangkisan badan dari luar ke dalam dengan tangan kiri." },
+  { x: 2,  y: -2, face: "R", ko: "앞서기 몸통바로지르기", rom: "Ap seogi · Momtong baro jireugi", ms: "Langkah kaki kiri ke depan. Tumbukan badan tangan kanan." },
+  { x: -1, y: -2, face: "L", ko: "앞서기 몸통안막기", rom: "Ap seogi · Momtong an makki", ms: "Pusing 180° ke kiri. Kaki kiri depan. Tangkisan badan dari luar ke dalam dengan tangan kanan." },
+  { x: -2, y: -2, face: "L", ko: "앞서기 몸통바로지르기", rom: "Ap seogi · Momtong baro jireugi", ms: "Langkah kaki kanan ke depan. Tumbukan badan tangan kiri." },
+  { x: 0,  y: -3, face: "U", ko: "앞굽이 아래막기", rom: "Ap kubi · Arae makki", ms: "Pusing ke kanan menghadap depan. Kaki kanan depan dalam kuda-kuda depan. Tangkisan bawah tangan kanan." },
+  { x: 0,  y: -3, face: "U", ko: "몸통바로지르기", rom: "Momtong baro jireugi", ms: "Kekal di tempat. Tumbukan badan tangan kiri." },
+  { x: -1, y: -4, face: "L", ko: "앞서기 얼굴막기", rom: "Ap seogi · Eolgul makki", ms: "Pusing ke kiri. Kaki kiri depan. Tangkisan muka dengan tangan kiri." },
+  { x: -2, y: -4, face: "L", ko: "앞차기 → 몸통지르기", rom: "Ap chagi · Momtong jireugi", ms: "Tendangan depan kaki kanan, mendarat ke depan dalam kuda-kuda berjalan. Tumbukan badan tangan kanan." },
+  { x: 1,  y: -4, face: "R", ko: "앞서기 얼굴막기", rom: "Ap seogi · Eolgul makki", ms: "Pusing 180° ke kanan. Kaki kanan depan. Tangkisan muka dengan tangan kanan." },
+  { x: 2,  y: -4, face: "R", ko: "앞차기 → 몸통지르기", rom: "Ap chagi · Momtong jireugi", ms: "Tendangan depan kaki kiri, mendarat ke depan. Tumbukan badan tangan kiri." },
+  { x: 0,  y: -2.6, face: "D", ko: "앞굽이 아래막기", rom: "Ap kubi · Arae makki", ms: "Pusing ke kanan menghadap belakang (arah mula). Kaki kiri depan dalam kuda-kuda depan. Tangkisan bawah tangan kiri." },
+  { x: 0,  y: -1.4, face: "D", ko: "앞굽이 몸통지르기", rom: "Ap kubi · Momtong jireugi", ms: "Langkah kaki kanan ke depan dalam kuda-kuda depan. Tumbukan badan tangan kanan.", kihap: true },
+];
+const KO_NUM = ["하나","둘","셋","넷","다섯","여섯","일곱","여덟","아홉","열"];
+
+/* =========================================================
+   Saved state
+   ========================================================= */
+const SAVE_KEY = "jomTaekwondo.v1";
+let S = { xp: 0, slow: false, bestReflex: 0, seen: {}, quizBest: {} };
+try {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw) S = Object.assign(S, JSON.parse(raw));
+} catch (e) {}
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* =========================================================
+   Voice (phone's Korean voice)
+   ========================================================= */
+let koVoice = null;
+function pickVoice() {
+  if (!("speechSynthesis" in window)) return;
+  const vs = speechSynthesis.getVoices();
+  koVoice = vs.find(v => /^ko/i.test(v.lang) && /yuna|premium|enhanced/i.test(v.name))
+         || vs.find(v => /^ko/i.test(v.lang)) || null;
+  updateVoiceNote();
+}
+if ("speechSynthesis" in window) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+function updateVoiceNote() {
+  $("voiceNote").textContent = koVoice ? ""
+    : "Tiada suara Korea dijumpai di telefon ini. Di iPhone: Tetapan → Kebolehcapaian → Kandungan Dituturkan → Suara → tambah Korea. Bunyi mungkin kurang tepat tanpanya.";
+}
+function say(text, onend) {
+  if (!("speechSynthesis" in window)) { if (onend) setTimeout(onend, 600); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "ko-KR";
+  if (koVoice) u.voice = koVoice;
+  u.rate = S.slow ? 0.6 : 0.9;
+  if (onend) { u.onend = onend; u.onerror = onend; }
+  speechSynthesis.resume();
+  speechSynthesis.speak(u);
+}
+
+/* =========================================================
+   Small helpers
+   ========================================================= */
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+let toastT;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove("on"), 1600);
+}
+function buzz(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+function flashClass(el, cls) {
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+}
+
+let actx;
+function beep(ok) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = ok ? "triangle" : "square";
+    o.frequency.setValueAtTime(ok ? 660 : 180, actx.currentTime);
+    if (ok) o.frequency.exponentialRampToValueAtTime(990, actx.currentTime + .12);
+    g.gain.setValueAtTime(.12, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + .25);
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime + .26);
+  } catch (e) {}
+}
+
+/* =========================================================
+   Belts & XP
+   ========================================================= */
+function beltIndex(xp) {
+  let i = 0;
+  BELTS.forEach((b, k) => { if (xp >= b.xp) i = k; });
+  return i;
+}
+function beltSvg(b) {
+  const stroke = b.c1 === "#ffffff" ? "#cfc6b6" : "rgba(0,0,0,.25)";
+  return `<svg viewBox="0 0 100 46" aria-hidden="true">
+    <defs><clipPath id="cl${b.xp}"><rect x="0" y="12" width="100" height="14" rx="3"/></clipPath></defs>
+    <g clip-path="url(#cl${b.xp})">
+      <rect x="0" y="12" width="100" height="14" fill="${b.c1}"/>
+      <rect x="0" y="19" width="100" height="7" fill="${b.c2}"/>
+    </g>
+    <rect x="0" y="12" width="100" height="14" rx="3" fill="none" stroke="${stroke}"/>
+    <path d="M44 24 L34 44 L42 44 L50 28 L58 44 L66 44 L56 24 Z" fill="${b.c2}" stroke="${stroke}"/>
+    <rect x="40" y="9" width="20" height="20" rx="4" fill="${b.c1}" stroke="${stroke}"/>
+    <rect x="40" y="19" width="20" height="10" rx="0" fill="${b.c2}"/>
+    <rect x="40" y="9" width="20" height="20" rx="4" fill="none" stroke="${stroke}"/>
+  </svg>`;
+}
+function addXp(n) {
+  const before = beltIndex(S.xp);
+  S.xp += n;
+  save();
+  const after = beltIndex(S.xp);
+  return after > before ? after : -1;
+}
+function showBeltUp(i) {
+  const b = BELTS[i];
+  $("bmBelt").innerHTML = beltSvg(b);
+  $("bmTitle").textContent = "Tahniah! 🎉";
+  $("bmText").textContent = "Kamu naik ke tali pinggang " + b.name + "!";
+  $("beltModal").classList.add("on");
+  say("축하합니다");
+}
+$("bmOk").onclick = () => { $("beltModal").classList.remove("on"); say("감사합니다"); };
+
+function renderHome() {
+  const i = beltIndex(S.xp), b = BELTS[i], next = BELTS[i + 1];
+  let pct = 100, sub = "Tahap tertinggi! Teruskan berlatih 💪";
+  if (next) {
+    pct = Math.round((S.xp - b.xp) / (next.xp - b.xp) * 100);
+    sub = (next.xp - S.xp) + " mata lagi ke " + next.name;
+  }
+  $("beltCard").innerHTML = `
+    <div class="beltrow">${beltSvg(b)}
+      <div><b>Tali ${esc(b.name)}</b><span>${S.xp} mata · ${esc(sub)}</span></div>
+    </div>
+    <div class="xpbar"><i style="width:${pct}%"></i></div>`;
+  $("optSlow").innerHTML = "🐢 Suara perlahan: <b>" + (S.slow ? "Ya" : "Tidak") + "</b>";
+}
+
+/* =========================================================
+   Navigation
+   ========================================================= */
+let current = "home";
+function go(id) {
+  if (current === "reflex") stopReflex();
+  if (current === "poomsae") stopAuto();
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
+  $(id).classList.add("on");
+  current = id;
+  window.scrollTo(0, 0);
+  if (id === "home") renderHome();
+  if (id === "learn") renderCats();
+  if (id === "quizPick") renderQuizPick();
+  if (id === "reflex") showReflexIntro();
+  if (id === "poomsae") renderPoomsae();
+  if (id === "belts") renderBelts();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-go]");
+  if (b) go(b.dataset.go);
+});
+
+/* =========================================================
+   Learn
+   ========================================================= */
+function termsOf(cat) { return TERMS.filter(t => t.cat === cat); }
+function renderCats() {
+  $("catGrid").innerHTML = CATS.map(c => {
+    const list = termsOf(c.id);
+    const seen = list.filter(t => S.seen[t.id]).length;
+    return `<button data-cat="${c.id}"><span class="ic">${c.ic}</span><b>${esc(c.name)}</b>
+      <small>${seen}/${list.length} dilihat</small></button>`;
+  }).join("");
+}
+$("catGrid").onclick = e => {
+  const b = e.target.closest("[data-cat]");
+  if (b) openCards(b.dataset.cat);
+};
+let deck = [], idx = 0;
+function openCards(cat) {
+  const c = CATS.find(x => x.id === cat);
+  deck = termsOf(cat);
+  idx = 0;
+  $("cardsTitle").textContent = c.ic + " " + c.name;
+  go("cards");
+  showCard();
+}
+function showCard() {
+  const t = deck[idx];
+  $("fIc").textContent = t.ic;
+  $("fKo").textContent = t.ko;
+  $("fRom").textContent = t.rom;
+  $("fMs").textContent = t.ms;
+  $("fHow").textContent = t.how || "";
+  $("fCount").textContent = (idx + 1) + " / " + deck.length;
+  flashClass($("flash"), "pop");
+  if (!S.seen[t.id]) { S.seen[t.id] = 1; save(); }
+  say(t.ko);
+}
+$("fPrev").onclick = () => { idx = (idx - 1 + deck.length) % deck.length; showCard(); };
+$("fNext").onclick = () => { idx = (idx + 1) % deck.length; showCard(); };
+$("fSay").onclick = () => say(deck[idx].ko);
+
+// swipe left / right on the card
+(() => {
+  let sx = null;
+  const f = $("flash");
+  f.addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
+  f.addEventListener("touchend", e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    sx = null;
+    if (dx < -50) $("fNext").onclick();
+    else if (dx > 50) $("fPrev").onclick();
+  });
+})();
+
+/* =========================================================
+   Quiz
+   ========================================================= */
+const QUIZ_SETS = [
+  { id: "all", ic: "🌟", name: "Campur Semua", cats: CATS.map(c => c.id) },
+  ...CATS.map(c => ({ id: c.id, ic: c.ic, name: c.name, cats: [c.id] })),
+];
+function renderQuizPick() {
+  $("quizGrid").innerHTML = QUIZ_SETS.map(q => {
+    const best = S.quizBest[q.id];
+    return `<button data-quiz="${q.id}"><span class="ic">${q.ic}</span><b>${esc(q.name)}</b>
+      <small>${best != null ? "Terbaik: " + best + "/10" : "Belum cuba"}</small></button>`;
+  }).join("");
+}
+$("quizGrid").onclick = e => {
+  const b = e.target.closest("[data-quiz]");
+  if (b) startQuiz(b.dataset.quiz);
+};
+
+let Q = null;
+function startQuiz(setId) {
+  const set = QUIZ_SETS.find(q => q.id === setId);
+  const pool = TERMS.filter(t => set.cats.includes(t.cat));
+  const picks = shuffle(pool);
+  while (picks.length < 10) picks.push(...shuffle(pool));
+  Q = { set, items: picks.slice(0, 10), n: 0, score: 0, gained: 0 };
+  $("quizTitle").textContent = set.ic + " " + set.name;
+  go("quiz");
+  showQuestion();
+}
+function distractors(t, k) {
+  // prefer wrong answers from the same category, so they are harder to guess
+  const same = shuffle(TERMS.filter(x => x.cat === t.cat && x.id !== t.id && x.ms !== t.ms));
+  const other = shuffle(TERMS.filter(x => x.cat !== t.cat));
+  return same.concat(other).slice(0, k);
+}
+function showQuestion() {
+  const t = Q.items[Q.n];
+  const types = ["ko2ms", "ms2ko"];
+  if (koVoice) types.push("audio");
+  const type = types[Math.floor(Math.random() * types.length)];
+  Q.cur = { t, type, done: false };
+
+  $("quizScore").textContent = Q.score + " ✓";
+  $("quizProg").style.width = (Q.n / 10 * 100) + "%";
+
+  const qEl = $("quizQ");
+  if (type === "ko2ms") {
+    qEl.innerHTML = `<div class="hint">Apakah maksud…</div><div class="ko">${esc(t.ko)}</div><div class="rom">${esc(t.rom)}</div>`;
+    say(t.ko);
+  } else if (type === "ms2ko") {
+    qEl.innerHTML = `<div class="hint">Apakah istilah Korea untuk…</div><div style="font-size:40px">${t.ic}</div><div class="ms">${esc(t.ms)}</div>`;
+  } else {
+    qEl.innerHTML = `<div class="hint">Dengar dan pilih maksudnya</div><button class="speaker" id="qSpk">🔊</button><div class="hint">Tekan untuk dengar lagi</div>`;
+    $("qSpk").onclick = () => say(t.ko);
+    setTimeout(() => say(t.ko), 250);
+  }
+  flashClass(qEl, "pop");
+
+  const opts = shuffle([t, ...distractors(t, 3)]);
+  $("quizA").className = "answers";
+  $("quizA").innerHTML = opts.map(o => {
+    const label = type === "ms2ko"
+      ? `<span class="ko" style="font-size:20px">${esc(o.ko)}</span><span class="sub">${esc(o.rom)}</span>`
+      : esc(o.ms);
+    return `<button data-id="${o.id}">${label}</button>`;
+  }).join("");
+}
+$("quizA").onclick = e => {
+  const b = e.target.closest("button[data-id]");
+  if (!b || Q.cur.done) return;
+  Q.cur.done = true;
+  const t = Q.cur.t;
+  const ok = +b.dataset.id === t.id;
+  [...$("quizA").children].forEach(x => {
+    x.disabled = true;
+    if (+x.dataset.id === t.id) x.classList.add("right");
+  });
+  if (ok) {
+    Q.score++; Q.gained += 10; beep(true); buzz(20);
+  } else {
+    b.classList.add("wrong"); beep(false); buzz([40, 40, 40]);
+    flashClass($("quizQ"), "shake");
+  }
+  // reveal the full answer so the child learns from the mistake too
+  if (Q.cur.type !== "ko2ms") {
+    $("quizQ").insertAdjacentHTML("beforeend",
+      `<div style="margin-top:6px"><span class="ko" style="font-size:22px">${esc(t.ko)}</span> · <b style="color:var(--red)">${esc(t.rom)}</b>${Q.cur.type === "audio" ? `<div>${esc(t.ms)}</div>` : ""}</div>`);
+  }
+  if (Q.cur.type !== "ko2ms" || !ok) say(t.ko);
+  $("quizScore").textContent = Q.score + " ✓";
+  setTimeout(nextQuestion, ok ? 1100 : 2300);
+};
+function nextQuestion() {
+  if (current !== "quiz") return;
+  Q.n++;
+  if (Q.n < 10) return showQuestion();
+  const bonus = Q.score === 10 ? 30 : 0;
+  const up = addXp(Q.gained + bonus);
+  const prev = S.quizBest[Q.set.id];
+  if (prev == null || Q.score > prev) S.quizBest[Q.set.id] = Q.score;
+  save();
+  const ic = Q.score === 10 ? "🏆" : Q.score >= 7 ? "🥋" : Q.score >= 4 ? "💪" : "🐣";
+  const title = Q.score === 10 ? "Sempurna!" : Q.score >= 7 ? "Hebat!" : Q.score >= 4 ? "Bagus, teruskan!" : "Jangan putus asa!";
+  showResult(ic, title,
+    `${Q.score}/10 betul · +${Q.gained + bonus} mata` + (bonus ? " (bonus sempurna +30)" : ""),
+    () => startQuiz(Q.set.id), up);
+}
+
+/* =========================================================
+   Result screen
+   ========================================================= */
+let againFn = null;
+function showResult(ic, title, text, again, beltUp) {
+  $("resIc").textContent = ic;
+  $("resTitle").textContent = title;
+  $("resText").textContent = text;
+  againFn = again;
+  go("result");
+  if (beltUp >= 0) setTimeout(() => showBeltUp(beltUp), 500);
+}
+$("resAgain").onclick = () => againFn && againFn();
+
+/* =========================================================
+   Reflex game: "Arahan Sabeomnim"
+   ========================================================= */
+const REFLEX_POOL = TERMS.filter(t => ["arahan", "seogi", "makki", "jireugi", "chagi", "badan", "kira"].includes(t.cat));
+let R = null;
+function showReflexIntro() {
+  $("rIntro").style.display = "";
+  $("rPlay").style.display = "none";
+  $("rHearts").textContent = "";
+  $("rScore").textContent = "0";
+  $("rBest").textContent = S.bestReflex ? "Rekod terbaik: " + S.bestReflex : "";
+}
+$("rStart").onclick = () => {
+  R = { score: 0, lives: 3, round: 0, timer: null, raf: null, last: -1, lock: false };
+  $("rIntro").style.display = "none";
+  $("rPlay").style.display = "";
+  say("준비, 시작!", () => { if (R) reflexRound(); });
+  // fallback in case the voice never fires onend
+  R.startT = setTimeout(() => { if (R && R.round === 0 && !R.started) reflexRound(); }, 2200);
+};
+function timeLimit() { return Math.max(2200, 6000 - R.round * 180); }
+function reflexRound() {
+  if (!R || current !== "reflex") return;
+  R.started = true;
+  R.lock = false;
+  let t;
+  do { t = REFLEX_POOL[Math.floor(Math.random() * REFLEX_POOL.length)]; } while (t.id === R.last);
+  R.last = t.id;
+  R.cur = t;
+  R.round++;
+  $("rHearts").textContent = "❤️".repeat(R.lives) + "🤍".repeat(3 - R.lives);
+  $("rScore").textContent = R.score;
+  // after round 15, hide the spelling: listen only (if a voice exists)
+  const hide = koVoice && R.round > 15;
+  $("rQ").innerHTML = `<div class="coach">🧑‍🏫 Sabeomnim: </div>
+    ${hide ? `<button class="speaker" id="rSpk">🔊</button>` : `<div class="rom" style="font-size:32px">"${esc(t.rom)}!"</div><div class="ko" style="font-size:24px">${esc(t.ko)}</div>`}`;
+  if (hide) $("rSpk").onclick = () => say(t.ko);
+  flashClass($("rQ"), "pop");
+  const opts = shuffle([t, ...distractors(t, 3)]);
+  $("rA").innerHTML = opts.map(o => `<button data-id="${o.id}">${o.ic}<span class="sub" style="color:inherit;font-size:16px;font-weight:700">${esc(o.ms)}</span></button>`).join("");
+  say(t.ko);
+
+  const limit = timeLimit(), start = performance.now(), bar = $("rTimer");
+  cancelAnimationFrame(R.raf);
+  const tick = now => {
+    if (!R || R.lock) return;
+    const left = 1 - (now - start) / limit;
+    bar.style.transform = `scaleX(${Math.max(0, left)})`;
+    bar.style.background = left < .3 ? "#ef5a5a" : left < .6 ? "#ffb02e" : "var(--blue)";
+    if (left <= 0) return reflexMiss(null);
+    R.raf = requestAnimationFrame(tick);
+  };
+  R.raf = requestAnimationFrame(tick);
+}
+$("rA").onclick = e => {
+  const b = e.target.closest("button[data-id]");
+  if (!b || !R || R.lock) return;
+  if (+b.dataset.id === R.cur.id) {
+    R.lock = true;
+    b.classList.add("right");
+    R.score++;
+    beep(true); buzz(15);
+    $("rScore").textContent = R.score;
+    if (R.score % 10 === 0) toast("🔥 " + R.score + " berturut! Kihap!");
+    setTimeout(reflexRound, 450);
+  } else {
+    reflexMiss(b);
+  }
+};
+function reflexMiss(btn) {
+  if (!R || R.lock) return;
+  R.lock = true;
+  cancelAnimationFrame(R.raf);
+  [...$("rA").children].forEach(x => { if (+x.dataset.id === R.cur.id) x.classList.add("right"); });
+  if (btn) btn.classList.add("wrong");
+  else toast("⏰ Terlalu lambat!");
+  beep(false); buzz([50, 40, 50]);
+  flashClass($("rQ"), "shake");
+  R.lives--;
+  $("rHearts").textContent = "❤️".repeat(R.lives) + "🤍".repeat(3 - R.lives);
+  if (R.lives <= 0) return setTimeout(endReflex, 1400);
+  setTimeout(reflexRound, 1500);
+}
+function endReflex() {
+  if (!R) return;
+  const score = R.score;
+  const gained = score * 5;
+  const record = score > S.bestReflex;
+  if (record) S.bestReflex = score;
+  const up = addXp(gained);
+  stopReflex();
+  showResult(record ? "🏆" : "🥋", record ? "Rekod baru!" : "Tamat latihan!",
+    `${score} arahan betul · +${gained} mata` + (record ? "" : ` · Rekod: ${S.bestReflex}`),
+    () => { go("reflex"); $("rStart").onclick(); }, up);
+}
+function stopReflex() {
+  if (!R) return;
+  cancelAnimationFrame(R.raf);
+  clearTimeout(R.startT);
+  R = null;
+}
+
+/* =========================================================
+   Poomsae
+   ========================================================= */
+let pIdx = 0, auto = null;
+const ARROW = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+function renderPoomsae() {
+  const p = POOMSAE[pIdx];
+  const lines = `
+    <g stroke="#e3d8c6" stroke-width=".14" stroke-linecap="round">
+      <line x1="-2.4" y1="0" x2="2.4" y2="0"/>
+      <line x1="-2.4" y1="-2" x2="2.4" y2="-2"/>
+      <line x1="-2.4" y1="-4" x2="2.4" y2="-4"/>
+      <line x1="0" y1="0" x2="0" y2="-4"/>
+    </g>`;
+  // trail of steps already done
+  const done = POOMSAE.slice(0, pIdx).map((s, i) =>
+    `<circle cx="${s.x}" cy="${s.y}" r=".16" fill="#bfc9dc"/>`).join("");
+  const [dx, dy] = ARROW[p.face];
+  const ax = p.x + dx * .55, ay = p.y + dy * .55;
+  const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+  $("pSvg").innerHTML = `
+    ${lines}
+    <text x="0" y="-4.55" text-anchor="middle" font-size=".34" fill="#9a9180" font-family="Baloo 2, sans-serif">DEPAN</text>
+    <text x="0" y="0.75" text-anchor="middle" font-size=".5">⭐</text>
+    ${done}
+    <line x1="${p.x}" y1="${p.y}" x2="${ax}" y2="${ay}" stroke="${p.kihap ? "#c8102e" : "#1d4f9c"}" stroke-width=".12"/>
+    <path d="M0 -.2 L.32 0 L0 .2 Z" fill="${p.kihap ? "#c8102e" : "#1d4f9c"}" transform="translate(${ax} ${ay}) rotate(${ang})"/>
+    <circle cx="${p.x}" cy="${p.y}" r=".32" fill="${p.kihap ? "#c8102e" : "#1d4f9c"}"/>
+    <text x="${p.x}" y="${p.y + .13}" text-anchor="middle" font-size=".34" font-weight="800" fill="#fff" font-family="Baloo 2, sans-serif">${pIdx + 1}</text>`;
+  $("pStep").innerHTML = `
+    <div class="num">Gerakan ${pIdx + 1} / ${POOMSAE.length}</div>
+    <div class="rom">${esc(p.rom)}</div>
+    <div class="ko">${esc(p.ko)}</div>
+    <div class="ms">${esc(p.ms)}</div>
+    ${p.kihap ? `<div class="kihap">😤 KIHAP!</div>` : ""}`;
+  $("pPlay").textContent = auto ? "⏸ Henti" : "▶ Main";
+}
+function sayStep() {
+  const p = POOMSAE[pIdx];
+  const num = pIdx < 10 ? KO_NUM[pIdx] + ". " : "";
+  say(num + p.ko.replace("→", ",") + (p.kihap ? ". 기합!" : ""));
+}
+$("pPrev").onclick = () => { stopAuto(); pIdx = (pIdx - 1 + POOMSAE.length) % POOMSAE.length; renderPoomsae(); sayStep(); };
+$("pNext").onclick = () => { stopAuto(); pIdx = (pIdx + 1) % POOMSAE.length; renderPoomsae(); sayStep(); };
+$("pPlay").onclick = () => {
+  if (auto) { stopAuto(); renderPoomsae(); return; }
+  auto = true;
+  renderPoomsae();
+  sayStep();
+  auto = setInterval(() => {
+    if (pIdx >= POOMSAE.length - 1) {
+      stopAuto();
+      say("바로");
+      toast("Baro! Tamat Taegeuk Il Jang 🎉");
+      renderPoomsae();
+      return;
+    }
+    pIdx++;
+    renderPoomsae();
+    sayStep();
+  }, S.slow ? 5500 : 4000);
+};
+function stopAuto() { if (auto) { clearInterval(auto); auto = null; } }
+
+/* =========================================================
+   Belts screen
+   ========================================================= */
+function renderBelts() {
+  const cur = beltIndex(S.xp);
+  $("beltList").innerHTML = BELTS.map((b, i) => `
+    <div class="b ${i > cur ? "lock" : ""}">${beltSvg(b)}
+      <div><b>${esc(b.name)} ${i === cur ? "⬅️ kamu" : i > cur ? "🔒" : "✅"}</b>
+      <span>${b.xp} mata · ${esc(b.note)}</span></div>
+    </div>`).join("");
+}
+
+/* =========================================================
+   Options
+   ========================================================= */
+$("optSlow").onclick = () => { S.slow = !S.slow; save(); renderHome(); say("하나, 둘, 셋"); };
+$("optReset").onclick = () => {
+  if (!confirm("Padam semua mata dan rekod? Tali pinggang akan kembali ke putih.")) return;
+  S = { xp: 0, slow: S.slow, bestReflex: 0, seen: {}, quizBest: {} };
+  save();
+  renderHome();
+  toast("Mula semula dari tali putih 🥋");
+};
+
+/* =========================================================
+   Home-screen icon for iPhone (iOS needs a PNG)
+   ========================================================= */
+function makeAppleIcon() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 180;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fbf6ee"; g.fillRect(0, 0, 180, 180);
+  g.translate(90, 90); g.rotate(-25 * Math.PI / 180);
+  const R0 = 62, H = R0 / 2;
+  g.fillStyle = "#1d4f9c";
+  g.beginPath(); g.arc(0, 0, R0, 0, Math.PI * 2); g.fill();
+  // red top half, plus the bulge into the bottom right, minus the bulge into the top left
+  g.fillStyle = "#c8102e";
+  g.beginPath();
+  g.arc(0, 0, R0, Math.PI, 0);
+  g.arc(H, 0, H, 0, Math.PI);
+  g.arc(-H, 0, H, 0, Math.PI, true);
+  g.fill();
+  $("appleIcon").href = c.toDataURL("image/png");
+}
+
+renderHome();
+makeAppleIcon();
+</script>
+</body>
+</html>

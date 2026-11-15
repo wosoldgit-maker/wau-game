@@ -48,3 +48,19 @@ A flashcard game in `iqra/index.html` that helps kids learn to read Iqra and sho
 - Options: shuffle cards, slow voice. Progress is saved on the phone.
 
 Play it at `/iqra/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/iqra/
+
+---
+
+# Jom Taekwondo
+
+A learning app in `taekwondo/index.html` for kids who are starting taekwondo. It teaches the Korean words used in the dojang, the basic techniques and the first poomsae.
+
+- **📖 Belajar**: flashcards in 9 groups (counting 1–10, dojang commands, things in the dojang, target areas, stances, blocks, punches and strikes, kicks, and the 5 tenets). Each card shows the Hangul, the rumi spelling, the Malay meaning and how to do the move. Press **🔊 Dengar** to hear it, or swipe to change card.
+- **❓ Kuiz**: 10 questions from one group or all of them. Questions are mixed: Korean → Malay, Malay → Korean, and listen → choose. The right answer is always shown so the child learns from mistakes.
+- **⚡ Arahan Sabeomnim**: the coach calls out a command and the child taps the meaning before the timer runs out. It gets faster each round, and after round 15 it is listen-only. 3 lives.
+- **🥋 Poomsae Taegeuk Il Jang**: all 18 moves, one at a time, with a floor map showing where to stand and which way to face. **▶ Main** plays through the moves on its own.
+- **🏅 Tali Pinggang**: points from the quiz and the reflex game move the child up from white to black belt in the app.
+- Sounds use the phone's Korean voice. On iPhone, add it in Settings → Accessibility → Spoken Content → Voices → Korean if it is missing.
+- Options: slow voice, start again. Progress is saved on the phone.
+
+Play it at `/taekwondo/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/taekwondo/
