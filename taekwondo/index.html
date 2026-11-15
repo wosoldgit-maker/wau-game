@@ -684,19 +684,58 @@ if ("speechSynthesis" in window) {
   speechSynthesis.onvoiceschanged = pickVoice;
 }
 function updateVoiceNote() {
-  $("voiceNote").textContent = koVoice ? ""
-    : "Tiada suara Korea dijumpai di telefon ini. Di iPhone: Tetapan → Kebolehcapaian → Kandungan Dituturkan → Suara → tambah Korea. Bunyi mungkin kurang tepat tanpanya.";
+  $("voiceNote").textContent = "🔇 Tiada bunyi? Matikan suis senyap (silent) di tepi iPhone dan kuatkan volum." +
+    (koVoice ? "" : " Jika masih senyap: Tetapan → Kebolehcapaian → Kandungan Dituturkan → Suara → tambah Korea.");
+}
+// iPhone Safari rules for the voice:
+//  - the very first speak() must happen inside a tap, so we "unlock" it on the first touch
+//  - a cancel() right before speak() can silently swallow the new speech,
+//    so we only cancel when something is talking, and wait a moment before speaking again
+//  - an utterance nobody holds on to can be thrown away mid-sentence, so we keep a reference
+let lastUtterance = null, sayTimer = null, voiceUnlocked = false, lastCancel = -1e9;
+function unlockSound() {
+  if (voiceUnlocked) return;
+  voiceUnlocked = true;
+  if ("speechSynthesis" in window) {
+    if (!koVoice) pickVoice();
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    u.isUnlock = true;
+    lastUtterance = u;
+    speechSynthesis.speak(u);
+  }
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+  } catch (e) {}
+}
+document.addEventListener("touchend", unlockSound, { capture: true, passive: true });
+document.addEventListener("click", unlockSound, true);
+
+function stopVoice() {
+  clearTimeout(sayTimer);
+  // the silent unlock sound is over in a blink: let the real word queue behind it,
+  // so the first word is still spoken inside the tap
+  if (lastUtterance && lastUtterance.isUnlock) return;
+  if ("speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending)) {
+    speechSynthesis.cancel();
+    lastCancel = performance.now();
+  }
 }
 function say(text, onend) {
   if (!("speechSynthesis" in window)) { if (onend) setTimeout(onend, 600); return; }
-  speechSynthesis.cancel();
+  stopVoice();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "ko-KR";
   if (koVoice) u.voice = koVoice;
   u.rate = S.slow ? 0.6 : 0.9;
+  u.volume = 1;
   if (onend) { u.onend = onend; u.onerror = onend; }
-  speechSynthesis.resume();
-  speechSynthesis.speak(u);
+  lastUtterance = u;
+  const go = () => { speechSynthesis.resume(); speechSynthesis.speak(u); };
+  const wait = 150 - (performance.now() - lastCancel);
+  if (wait > 0) sayTimer = setTimeout(go, wait);
+  else go();
 }
 
 /* =========================================================
@@ -801,7 +840,7 @@ let current = "home";
 function go(id) {
   if (current === "reflex") stopReflex();
   if (current === "poomsae") stopAuto();
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  stopVoice();
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
   $(id).classList.add("on");
   current = id;
