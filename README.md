@@ -94,22 +94,22 @@ Play it at `/cbop/` on the same site, for example https://wosoldgit-maker.github
 
 # Jom Bola
 
-A football game in `bola/index.html` for 2 to 10 people, each on their own phone or computer. Anyone who has the link can play.
+A football game in `bola/index.html` for 2 to 6 people, each on their own phone or computer. Anyone who has the link can play.
 
 - Press **Create game**. You get a link and a 5-letter code. Send the link with **Copy link** or **Share…**.
 - Friends open the link, type a name and press **Join game**. They can also type the code on the start screen.
-- Players are put into Red and Blue teams in turn (up to 5 a side; anyone after that watches). Change team from the **☰** menu.
-- It is always 5 against 5. Computer players fill every empty place: a goalkeeper, two defenders, a winger and a striker. When a friend joins, they take a computer player's place. With only two people it is still 5v5, each with 4 computer teammates. The host can turn computer players off in the **☰** menu.
+- Players are put into Red and Blue teams in turn (up to 3 a side; anyone after that watches). Change team from the **☰** menu.
+- It is always 3 against 3 on a small pitch. Computer players fill every empty place: a goalkeeper, a defender and a striker. When a friend joins, they take a computer player's place. With only two people it is still 3v3, each with 2 computer teammates. The host can turn computer players off in the **☰** menu.
 - The match starts straight away. With computer players off, it waits until each team has at least one person, and goals don't count during the warm-up.
 - Players are drawn from above as footballers in kit, with head, arms, legs and boots. They run with a stride, face where they are going and swing a leg when they kick. Keepers wear green (Red) or orange (Blue). People have their name under them and a yellow ring for you; computer players show their shirt number.
 - After a goal, the team that let it in kicks off. The goal is credited to the player who shot it, or shown as an own goal.
 - Controls work like a console football game:
-  - **Run**: drag anywhere on the left half of the screen (arrow keys or WASD on a computer). All the buttons sit together in the bottom-right corner for your right thumb.
+  - **Run**: drag anywhere on the left half of the screen (arrow keys or WASD on a computer). The two buttons, the same size, sit in the bottom-right corner for your right thumb. They change depending on whether you have the ball.
   - **PASS** (hold J or X): hold to fill the blue power bar, then let go. A short hold passes to a nearby teammate, a long hold to one further away, in the direction you are pointing. If that teammate is a computer player, you take control of them so you can carry on the move, and they step across to meet the ball.
   - **SHOOT** (hold Space or K): hold to fill the power bar, let go to shoot. Point roughly at the goal and the shot is aimed at the corner you lean towards. Full power can fly wide.
-  - **⇄ Switch** (Q or L): take control of the teammate nearest the ball.
-  - Without the ball, the buttons change: **TACKLE** is a slide tackle along the grass at the ball (miss it and you need a moment to get back up), and holding **PRESS** runs you at the ball for you.
-- The game runs at a calmer pace (`PACE` in the code, 0.7 = 70% speed) so it is easier to control on a phone.
+  - Without the ball, the buttons change: **TACKLE** (J) is a slide tackle along the grass at the ball (miss it and you need a moment to get back up), and **SWITCH** (Space) takes control of the teammate nearest the ball.
+  - When a computer teammate wins the ball, you take control of them automatically.
+- The game runs slowly, at a quarter of full speed, so it is easy to control on a phone. To change it, edit `PACE` near the top of the code (1 = full speed, 0.25 = a quarter).
 - The ball stays at your feet while you dribble and leaves from the kicking foot. Players swing their leg back while you charge a shot and through the ball when they kick. Keepers dive with their arms out, and an opponent who gets close can poke the ball away.
 - Hold the phone upright or sideways. Upright, the pitch turns so Red attacks up the screen.
 - Computer players only run on the host's phone, so they don't add lag for anyone.
