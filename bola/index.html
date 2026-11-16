@@ -212,16 +212,16 @@
 // =====================================================================
 //  Field and physics settings (world units, roughly pixels on a laptop)
 // =====================================================================
-const FW = 1000, FH = 600;          // pitch size
-const GOAL_H = 170, GOAL_D = 45;    // goal mouth height and net depth
+const FW = 800, FH = 480;           // pitch size (3 v 3)
+const GOAL_H = 150, GOAL_D = 42;    // goal mouth height and net depth
 const PR = 17, BR = 10, POST_R = 6; // player, ball and post radius
 const MARGIN = 30;                  // how far players can go past the lines
 const STEP = 1 / 60;                // physics step (real time)
-const PACE = 0.7;                   // game speed: below 1 slows players and ball down
+const PACE = 0.25;                  // game speed: 1 = full speed, 0.25 = a quarter of it
 const DT = STEP * PACE;             // physics time per step
 const FRICTION = Math.pow(0.986, PACE);
-const MAX_PEOPLE = 10;              // 5 people a side, the rest watch
-const TEAM_MAX = 5;
+const MAX_PEOPLE = 6;               // 3 people a side, the rest watch
+const TEAM_MAX = 3;
 const REACH = PR + BR + 7;          // how close the ball must be to your feet
 const ID_PREFIX = "jombola-";
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -246,7 +246,7 @@ let botsOn = true;        // fill empty places with computer players
 
 // Host-side simulation
 //  - people: the humans in the room, each may control one footballer
-//  - bodies: the footballers on the pitch (5 a side with computer players)
+//  - bodies: the footballers on the pitch (3 a side with computer players)
 const sim = {
   players: new Map(),     // id -> {id, name, team, conn, seen, in, lastP, lastW, shootMode}
   bodies: [],             // {id, team, slot, x, y, vx, vy, face, ctrl, ix, iy, kcd, ...}
@@ -353,8 +353,8 @@ function showError(title, msg) {
 function enterGame() {
   show("start", false); show("hud");
   $("helpTxt").innerHTML = isTouch
-    ? "Left thumb: drag to run.<br>PASS and SHOOT: hold to fill the power bar, let go to kick. A short hold is a short pass, a long hold a long pass.<br>⇄: switch to the player nearest the ball.<br>Without the ball: TACKLE slides in, hold PRESS to chase the ball."
-    : "Arrows / WASD: run.<br>J or X: hold for pass power, let go to pass (slide tackle without the ball).<br>Space or K: hold for shot power, let go to shoot (press without the ball).<br>Q or L: switch player.";
+    ? "Left thumb: drag to run.<br>With the ball: PASS and SHOOT, hold to fill the power bar and let go to kick. A short hold is a short pass, a long hold a long pass.<br>Without the ball: TACKLE slides in, SWITCH takes control of the teammate nearest the ball."
+    : "Arrows / WASD: run.<br>With the ball: hold J (pass) or Space (shoot) for power, let go to kick.<br>Without the ball: J slide tackles, Space switches player.";
 }
 
 // =====================================================================
@@ -445,20 +445,19 @@ function addPlayer(id, name, conn) {
 
 function setTeam(p, t) {
   if (!["r", "b", "s"].includes(t) || p.team === t) return;
-  if (t !== "s" && peopleOn(t).length >= TEAM_MAX) { if (p.id === myId) toast("That team is full (5 people)"); return; }
+  if (t !== "s" && peopleOn(t).length >= TEAM_MAX) { if (p.id === myId) toast("That team is full (3 people)"); return; }
   p.team = t;
   afterRosterChange();
 }
 
-// The 5 places in a team, as fractions of the pitch for Red (Blue is mirrored).
+// The 3 places in a team, as fractions of the pitch for Red (Blue is mirrored).
 const SLOTS = [
   { x: 0.05, y: 0.50, num: 1 },   // goalkeeper
-  { x: 0.22, y: 0.27, num: 2 },   // left back
-  { x: 0.22, y: 0.73, num: 4 },   // right back
-  { x: 0.36, y: 0.30, num: 7 },   // left wing
-  { x: 0.40, y: 0.62, num: 9 },   // striker
+  { x: 0.24, y: 0.40, num: 4 },   // defender
+  { x: 0.40, y: 0.60, num: 9 },   // striker
 ];
-const PERSON_PREF = [4, 3, 1, 2, 0];   // which places people take first
+const STRIKER = 2;
+const PERSON_PREF = [2, 1, 0];        // which places people take first
 const SKIN = ["#f1c7a5", "#d9a074", "#b77b4f", "#8d5a36", "#5e3b22", "#e8b48c"];
 const HAIR = ["#1d140e", "#3b2414", "#5b3a1e", "#111", "#7a4a20", "#c9a15a"];
 
@@ -481,7 +480,7 @@ function arrangeTeams() {
     const ids = new Set(people.map((p) => p.id));
     let mine = sim.bodies.filter((b) => b.team === t);
     for (const b of mine) if (b.ctrl !== null && !ids.has(b.ctrl)) { b.ctrl = null; b.charging = false; b.queued = null; }
-    const want = botsOn ? 5 : people.length;
+    const want = botsOn ? SLOTS.length : people.length;
     // Too many: remove computer-controlled ones, attackers first
     while (mine.length > want) {
       const free = mine.filter((b) => b.ctrl === null).sort((a, b) => PERSON_PREF.indexOf(a.slot) - PERSON_PREF.indexOf(b.slot));
@@ -492,7 +491,7 @@ function arrangeTeams() {
       if (sim.lastTouch === v) sim.lastTouch = null;
     }
     // Too few: add the missing places
-    const order = botsOn ? [0, 1, 2, 3, 4] : PERSON_PREF;
+    const order = botsOn ? [0, 1, 2] : PERSON_PREF;
     for (const s of order) {
       if (mine.length >= want) break;
       if (!mine.some((b) => b.slot === s)) { const b = newBody(t, s); sim.bodies.push(b); mine.push(b); }
@@ -528,7 +527,7 @@ function resetPositions() {
   // The team that kicks off puts its striker on the ball
   const kt = sim.kickTeam || (Math.random() < 0.5 ? "r" : "b");
   const mates = sim.bodies.filter((b) => b.team === kt);
-  const striker = mates.find((b) => b.slot === 4) || mates.find((b) => b.ctrl !== null) || mates[0];
+  const striker = mates.find((b) => b.slot === STRIKER) || mates.find((b) => b.ctrl !== null) || mates[0];
   if (striker) { striker.x = FW / 2 + (kt === "r" ? -1 : 1) * (PR + BR + 2); striker.y = FH / 2; }
   Object.assign(sim.ball, { x: FW / 2, y: FH / 2, vx: 0, vy: 0 });
   sim.owner = null; sim.lastTouch = null; sim.lastKicker = null;
@@ -573,7 +572,8 @@ function switchPlayer(person, to = null) {
   if (!to || to.ctrl !== null) return;
   if (cur) { cur.ctrl = null; cur.charging = false; cur.charge = 0; cur.queued = null; cur.pressing = false; }
   to.ctrl = person.id; to.queued = null; to.charging = false;
-  person.shootMode = null; person.passMode = null;
+  if (person.shootMode !== "switched") person.shootMode = null;
+  person.passMode = null;
 }
 
 // =====================================================================
@@ -664,13 +664,14 @@ function handlePeople() {
     const b = bodyOf(person);
     if (!b) continue;
     b.ix = inp.x; b.iy = inp.y;
-    const theyHaveIt = sim.owner && sim.owner.team !== b.team;
     const down = b.tackleT > 0 || b.downT > 0;
 
-    // PASS: hold for power, let go to pass.  Without the ball near: slide tackle
+    const onBall = isOnBall(b);
+
+    // On the ball, PASS: hold for power, let go to pass.  Off the ball, TACKLE: slide in
     if (newPass && person.passMode === null && !down) {
       const d = Math.hypot(sim.ball.x - b.x, sim.ball.y - b.y);
-      if (theyHaveIt && d < 95 && !canReach(b)) { startSlide(b); person.passMode = "tackle"; }
+      if (!onBall) { if (d < 110) startSlide(b); person.passMode = "tackle"; }
       else if (b.charging !== "shot") person.passMode = "pass";
     }
     if (person.passMode === "pass") {
@@ -678,18 +679,21 @@ function handlePeople() {
       else { b.queued = { type: "pass", power: Math.max(0.12, b.charge), t: 0.4 }; b.charging = false; b.charge = 0; person.passMode = null; }
     } else if (person.passMode === "tackle" && !inp.p) person.passMode = null;
 
-    // SHOOT: hold for power, let go to shoot.  When they have the ball: hold to PRESS
-    if (newShoot && person.shootMode === null && !down) {
-      if (theyHaveIt) person.shootMode = "press";
-      else if (b.charging !== "pass") person.shootMode = "shoot";
+    // On the ball, SHOOT: hold for power, let go to shoot.  Off the ball, SWITCH player
+    if (newShoot && person.shootMode === null) {
+      if (!onBall) { switchPlayer(person); person.shootMode = "switched"; }
+      else if (!down && b.charging !== "pass") person.shootMode = "shoot";
     }
     if (person.shootMode === "shoot") {
       if (inp.s) { b.charging = "shot"; b.charge = Math.min(1, b.charge + STEP / 0.9); }
       else { b.queued = { type: "shot", power: Math.max(0.25, b.charge), t: 0.4 }; b.charging = false; b.charge = 0; person.shootMode = null; }
-    }
-    b.pressing = person.shootMode === "press" && inp.s;
-    if (person.shootMode === "press" && !inp.s) person.shootMode = null;
+    } else if (person.shootMode === "switched" && !inp.s) person.shootMode = null;
   }
+}
+
+// "On the ball" = you have it, or it's loose right at your feet
+function isOnBall(b) {
+  return sim.owner === b || (!sim.owner && Math.hypot(sim.ball.x - b.x, sim.ball.y - b.y) < 70);
 }
 
 // Slide tackle: a fast slide along the ground, then a moment to get up
@@ -814,7 +818,22 @@ function step() {
     if (d < bd) { bd = d; best = b; }
   }
   if (best && best.slot === 0 && best !== sim.owner && rel2(best) > 430) { best.diveT = 0.5; sim.events.push("s"); }
-  if (best !== sim.owner) { sim.owner = best; if (best) { sim.lastTouch = best; best.holdT = 0; } }
+  if (best !== sim.owner) {
+    sim.owner = best;
+    if (best) {
+      sim.lastTouch = best; best.holdT = 0;
+      if (best.ctrl === null && best.slot !== 0) {
+        let who = null, wd = 1e9;
+        for (const person of sim.players.values()) {
+          if (person.team !== best.team) continue;
+          const pb = bodyOf(person);
+          const d = pb ? Math.hypot(pb.x - best.x, pb.y - best.y) : 0;
+          if (d < wd) { wd = d; who = person; }
+        }
+        if (who) switchPlayer(who, best);
+      }
+    }
+  }
 
   // Queued kicks fire as soon as the ball is at the foot
   for (const b of all) {
@@ -1012,7 +1031,16 @@ function botThink(b, all) {
     return;
   }
   if (b === chaser) {
-    const px = ball.x + ball.vx * 0.25, py = ball.y + ball.vy * 0.25;
+    let px = ball.x + ball.vx * 0.25, py = ball.y + ball.vy * 0.25;
+    const o = sim.owner;
+    if (o && o.team !== b.team) {
+      // Don't run into the back of the player with the ball: go round to the ball's open side
+      const fx = Math.cos(o.face), fy = Math.sin(o.face);
+      const behind = (b.x - o.x) * fx + (b.y - o.y) * fy < 10;
+      const side = ((b.x - o.x) * -fy + (b.y - o.y) * fx) >= 0 ? 1 : -1;
+      if (behind) { px = o.x - fy * side * 42 + fx * 20; py = o.y + fx * side * 42 + fy * 20; }
+      else { px = ball.x + fx * 8; py = ball.y + fy * 8; }
+    }
     goTo(b, px, py, 0.92);
     // Close to an opponent with the ball: sometimes tackle
     if (sim.owner && sim.owner.team !== b.team && dist(b) < 60 && Math.random() < 0.01 * PACE) startSlide(b);
@@ -1020,10 +1048,10 @@ function botThink(b, all) {
   }
   // Hold the team shape, sliding with the ball; push up when we have it
   const home = slotPos(b.team, b.slot);
-  const push = weHaveIt ? (b.slot >= 3 ? 170 : 90) : 0;
+  const push = weHaveIt ? (b.slot === STRIKER ? 140 : 70) : 0;
   let tx = clamp(home.x + (ball.x - FW / 2) * 0.5 + push * dir, 40, FW - 40);
   let ty = clamp(home.y * 0.7 + ball.y * 0.3 + Math.sin(sim.tick / 90 + b.wobble) * 18, 30, FH - 30);
-  if (!weHaveIt && b.slot <= 2 && (ball.x - tx) * dir < 60) tx = ball.x - dir * 90;   // stay goal-side
+  if (!weHaveIt && b.slot === 1 && (ball.x - tx) * dir < 60) tx = ball.x - dir * 80;   // stay goal-side
   goTo(b, tx, ty, weHaveIt ? 0.85 : 0.8);
 }
 
@@ -1210,10 +1238,10 @@ function updateMenu() {
   }
   if (botsOn) {
     const hr = roster.filter((q) => q.team === "r").length, hb = roster.filter((q) => q.team === "b").length;
-    const n = Math.max(0, 5 - hr) + Math.max(0, 5 - hb);
+    const n = Math.max(0, 3 - hr) + Math.max(0, 3 - hb);
     if (n) {
       const row = document.createElement("div"); row.className = "pl small";
-      row.textContent = "🤖 + " + n + " computer players (Red " + Math.max(0, 5 - hr) + ", Blue " + Math.max(0, 5 - hb) + ")";
+      row.textContent = "🤖 + " + n + " computer players (Red " + Math.max(0, 3 - hr) + ", Blue " + Math.max(0, 3 - hb) + ")";
       list.append(row);
     }
   }
@@ -1279,16 +1307,14 @@ addEventListener("blur", () => keys.clear());
 
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };  // screen px
 const shootTouch = { id: null }, passTouch = { id: null };
-const pressed = { sw: 0 };                             // time of last tap, for the button flash
 const STICK_R = 55;
 const canvas = $("game");
 // All buttons sit together in the bottom-right corner, under the right thumb
 function buttonLayout() {
   const s = clamp(Math.min(W, H) / 400, 0.8, 1.1);
   return {
-    shoot: { x: W - 62 * s, y: H - 78 * s, r: 40 * s },
-    pass: { x: W - 150 * s, y: H - 48 * s, r: 32 * s },
-    sw: { x: W - 50 * s, y: H - 168 * s, r: 25 * s },
+    shoot: { x: W - 60 * s, y: H - 115 * s, r: 40 * s },
+    pass: { x: W - 150 * s, y: H - 62 * s, r: 40 * s },
   };
 }
 canvas.addEventListener("pointerdown", (e) => {
@@ -1303,7 +1329,6 @@ canvas.addEventListener("pointerdown", (e) => {
   }
   if (hit === "shoot" && shootTouch.id === null) { shootTouch.id = e.pointerId; ctl.sc++; }
   else if (hit === "pass" && passTouch.id === null) { passTouch.id = e.pointerId; ctl.pc++; }
-  else if (hit === "sw") { ctl.wc++; pressed.sw = performance.now(); }
   else if (!hit && e.clientX < W * 0.5 && stick.id === null) {
     Object.assign(stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY });
   }
@@ -1390,20 +1415,20 @@ function drawPitch() {
   ctx.fillStyle = "#2a7a3b";
   ctx.fillRect(-GOAL_D - 25, -45, FW + 2 * (GOAL_D + 25), FH + 90);
   // Stripes
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 8; i++) {
     ctx.fillStyle = i % 2 ? "#2f8a42" : "#33934a";
-    ctx.fillRect(i * FW / 10, 0, FW / 10, FH);
+    ctx.fillRect(i * FW / 8, 0, FW / 8, FH);
   }
   ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
   ctx.strokeRect(0, 0, FW, FH);
   ctx.beginPath(); ctx.moveTo(FW / 2, 0); ctx.lineTo(FW / 2, FH); ctx.stroke();
-  ctx.beginPath(); ctx.arc(FW / 2, FH / 2, 80, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FW / 2, FH / 2, 70, 0, Math.PI * 2); ctx.stroke();
   ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(FW / 2, FH / 2, 4, 0, Math.PI * 2); ctx.fill();
   // Penalty boxes
-  ctx.strokeRect(0, FH / 2 - 160, 140, 320);
-  ctx.strokeRect(FW - 140, FH / 2 - 160, 140, 320);
-  ctx.beginPath(); ctx.arc(140, FH / 2, 60, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(FW - 140, FH / 2, 60, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
+  ctx.strokeRect(0, FH / 2 - 135, 115, 270);
+  ctx.strokeRect(FW - 115, FH / 2 - 135, 115, 270);
+  ctx.beginPath(); ctx.arc(115, FH / 2, 50, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FW - 115, FH / 2, 50, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
   // Goals with nets
   for (const side of [0, 1]) {
     const x0 = side === 0 ? -GOAL_D : FW, y0 = FH / 2 - GOAL_H / 2;
@@ -1680,12 +1705,11 @@ function drawControls() {
   ctx.globalAlpha = 0.7; ctx.fillStyle = "#fff";
   ctx.beginPath(); ctx.arc(kx, ky, 24, 0, Math.PI * 2); ctx.fill();
   // buttons change with the situation, like on a console
-  const L = buttonLayout(), now = performance.now();
-  const myT = myTeam() === "r" ? 0 : 1;
-  const defending = view.po !== -1 && view.po !== myT;
-  drawButton(L.shoot, defending ? "PRESS" : "SHOOT", "#ffd23f", shootTouch.id !== null);
-  drawButton(L.pass, defending ? "TACKLE" : "PASS", "#8ecbff", passTouch.id !== null);
-  drawButton(L.sw, "⇄", "#ffffff", now - pressed.sw < 150);
+  const L = buttonLayout();
+  const me = view.players.find((p) => p.ctrl !== null && p.ctrl === myId);
+  const onBall = me && ((me.k & 4) || (view.po === -1 && Math.hypot(view.ball.x - me.x, view.ball.y - me.y) < 70));
+  drawButton(L.shoot, onBall ? "SHOOT" : "SWITCH", onBall ? "#ffd23f" : "#ffffff", shootTouch.id !== null);
+  drawButton(L.pass, onBall ? "PASS" : "TACKLE", onBall ? "#8ecbff" : "#ff8a7a", passTouch.id !== null);
   ctx.restore();
 }
 
