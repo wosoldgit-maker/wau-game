@@ -171,6 +171,8 @@
         </select>
         <button id="btnRestart">Restart match</button>
       </div>
+      <button id="btnBots">🤖 Computer players: ON</button>
+      <div class="small">When ON, empty places are filled so it is always 5 against 5.</div>
     </div>
     <div class="small" id="helpTxt"></div>
     <div class="row">
@@ -234,6 +236,7 @@ let peer = null;
 let hostConn = null;      // client: connection to host
 let roster = [];          // [{id, name, team}]
 let matchLen = 180;
+let botsOn = true;         // fill empty places with computer players
 
 // Host-side simulation state
 const sim = {
@@ -246,6 +249,8 @@ const sim = {
   scorer: "",
   events: [],
   nextId: 1,
+  bots: [],               // computer players
+  botSeq: 0,
   tick: 0,
 };
 
@@ -413,49 +418,89 @@ function broadcast(msg) { for (const p of sim.players.values()) if (p.conn) send
 
 function teamCount(t) { let n = 0; for (const p of sim.players.values()) if (p.team === t) n++; return n; }
 function bodies() { return teamCount("r") + teamCount("b"); }
+function teamSize(t) { return teamCount(t) + sim.bots.filter((b) => b.team === t).length; }
+// Everyone on the pitch: people first, then computer players
+function onPitch() { return [...sim.players.values()].filter((p) => p.team !== "s").concat(sim.bots); }
 
 function addPlayer(id, name, conn) {
   let team = "s";
   if (bodies() < MAX_BODIES) team = teamCount("r") <= teamCount("b") ? "r" : "b";
-  const p = { id, name, team, x: 0, y: 0, vx: 0, vy: 0, ix: 0, iy: 0, kick: false, kcd: 0, conn, seen: performance.now() };
+  const p = { id, name, team, x: 0, y: 0, vx: 0, vy: 0, ix: 0, iy: 0, kick: false, kcd: 0, conn, seen: performance.now(), slot: 4 };
   sim.players.set(id, p);
-  placeAtSpawn(p);
-  afterRosterChange();
+  afterRosterChange(p);
 }
 
 function setTeam(p, t) {
   if (!["r", "b", "s"].includes(t) || p.team === t) return;
   if (t !== "s" && p.team === "s" && bodies() >= MAX_BODIES) { if (p.id === myId) toast("Teams are full (5 a side)"); return; }
   p.team = t; p.vx = p.vy = 0;
-  placeAtSpawn(p);
-  afterRosterChange();
+  afterRosterChange(p);
 }
 
-function afterRosterChange() {
+// The 5 places in a team, as fractions of the pitch for Red (Blue is mirrored).
+// Computer players fill from the keeper up; people take the attacking places first.
+const SLOTS = [
+  { x: 0.05, y: 0.50, num: 1 },   // goalkeeper
+  { x: 0.22, y: 0.27, num: 2 },   // left back
+  { x: 0.22, y: 0.73, num: 4 },   // right back
+  { x: 0.36, y: 0.30, num: 7 },   // left wing
+  { x: 0.40, y: 0.62, num: 9 },   // striker
+];
+const SKIN = ["#f1c7a5", "#d9a074", "#b77b4f", "#8d5a36", "#5e3b22", "#e8b48c"];
+const HAIR = ["#1d140e", "#3b2414", "#5b3a1e", "#111", "#7a4a20", "#c9a15a"];
+
+// Make each team 5 strong with computer players (or remove them), then give everyone a place
+function arrangeTeams(newcomer) {
+  for (const t of ["r", "b"]) {
+    const humans = [...sim.players.values()].filter((p) => p.team === t);
+    let bots = sim.bots.filter((b) => b.team === t);
+    const want = botsOn ? Math.max(0, 5 - humans.length) : 0;
+    while (bots.length > want) { const b = bots.pop(); sim.bots.splice(sim.bots.indexOf(b), 1); }
+    humans.forEach((p, i) => { p.slot = 4 - (i % 5); });
+    bots.forEach((b, i) => { b.slot = i; });
+    for (let i = bots.length; i < want; i++) {
+      const b = { id: -(sim.botSeq++ % 1000 + 1), bot: true, name: "", team: t, slot: i,
+        x: 0, y: 0, vx: 0, vy: 0, ix: 0, iy: 0, kick: false, kcd: 0, wobble: Math.random() * 6.28 };
+      sim.bots.push(b); bots.push(b); placeAtSpawn(b);
+    }
+  }
+  if (newcomer) placeAtSpawn(newcomer);
+}
+
+function afterRosterChange(newcomer) {
+  arrangeTeams(newcomer);
   roster = [...sim.players.values()].map((p) => ({ id: p.id, name: p.name, team: p.team }));
-  broadcast({ t: "r", L: roster.map((p) => [p.id, p.name, p.team]), ml: matchLen });
-  // Match starts on its own once both teams have someone
-  const both = teamCount("r") > 0 && teamCount("b") > 0;
+  broadcast({ t: "r", L: roster.map((p) => [p.id, p.name, p.team]), ml: matchLen, bo: botsOn ? 1 : 0 });
+  // Match starts on its own once both teams have someone (computer players count)
+  const both = teamSize("r") > 0 && teamSize("b") > 0;
   if (sim.phase === "warm" && both) startMatch();
   if (sim.phase !== "warm" && sim.phase !== "end" && !both) { sim.phase = "warm"; resetPositions(); }
   updateMenu();
 }
 
-// Kick-off formation, as fractions of the pitch (for the red side)
-const FORMATION = [[0.40, 0.50], [0.28, 0.25], [0.28, 0.75], [0.12, 0.50], [0.20, 0.50]];
+function slotPos(team, slot) {
+  const f = SLOTS[slot] || SLOTS[4];
+  return { x: (team === "b" ? 1 - f.x : f.x) * FW, y: (team === "b" ? 1 - f.y : f.y) * FH };
+}
 function placeAtSpawn(p) {
-  const mates = [...sim.players.values()].filter((q) => q.team === p.team);
-  const i = Math.max(0, mates.indexOf(p)) % FORMATION.length;
-  const f = FORMATION[i];
-  p.x = (p.team === "b" ? 1 - f[0] : f[0]) * FW;
-  p.y = f[1] * FH;
+  const pos = slotPos(p.team, p.slot);
+  // Two people in the same place (6+ people on a team can't happen, but be safe)
+  p.x = pos.x; p.y = pos.y;
 }
 function resetPositions() {
-  for (const p of sim.players.values()) { placeAtSpawn(p); p.vx = p.vy = 0; }
+  for (const p of onPitch()) {
+    placeAtSpawn(p); p.vx = p.vy = 0;
+    if (p.bot) { p.x += (Math.random() - 0.5) * 24; p.y += (Math.random() - 0.5) * 24; p.wobble = Math.random() * 6.28; }
+  }
+  // The team that kicks off puts its striker on the ball
+  const kt = sim.kickTeam || (Math.random() < 0.5 ? "r" : "b");
+  const striker = onPitch().find((p) => p.team === kt && p.slot === 4) || onPitch().find((p) => p.team === kt);
+  if (striker) { striker.x = FW / 2 + (kt === "r" ? -1 : 1) * (PR + BR + 3); striker.y = FH / 2; }
   Object.assign(sim.ball, { x: FW / 2, y: FH / 2, vx: 0, vy: 0 });
 }
 function startMatch() {
   sim.score = [0, 0]; sim.timeLeft = matchLen;
+  sim.kickTeam = Math.random() < 0.5 ? "r" : "b";
   resetPositions();
   sim.phase = "kickoff"; sim.phaseT = 3;
   show("end", false);
@@ -463,10 +508,86 @@ function startMatch() {
 
 $("lenSel").onchange = () => { matchLen = +$("lenSel").value; afterRosterChange(); };
 $("btnRestart").onclick = () => {
-  if (teamCount("r") && teamCount("b")) { startMatch(); show("menu", false); toast("New match!"); }
+  if (teamSize("r") && teamSize("b")) { startMatch(); show("menu", false); toast("New match!"); }
   else toast("Need at least one player on each team");
 };
-$("btnAgain").onclick = () => { if (role === "host") { if (teamCount("r") && teamCount("b")) startMatch(); else { sim.phase = "warm"; resetPositions(); show("end", false); } } };
+$("btnBots").onclick = () => { botsOn = !botsOn; afterRosterChange(); };
+$("btnAgain").onclick = () => { if (role === "host") { if (teamSize("r") && teamSize("b")) startMatch(); else { sim.phase = "warm"; resetPositions(); show("end", false); } } };
+
+// =====================================================================
+//  Computer players
+// =====================================================================
+function botThink(p, all) {
+  const b = sim.ball;
+  const dir = p.team === "r" ? 1 : -1;            // which way we attack
+  const ownX = p.team === "r" ? 0 : FW, oppX = FW - ownX;
+  const mates = all.filter((q) => q.team === p.team);
+  const dist = (q) => Math.hypot(b.x - q.x, b.y - q.y);
+  let target = null, attack = false;
+
+  // The nearest outfield player of each team goes for the ball
+  let chaser = null, cd = 1e9;
+  for (const q of mates) {
+    if (!q.bot || q.slot === 0) continue;           // keeper decides for himself
+    const d = dist(q); if (d < cd) { cd = d; chaser = q; }
+  }
+  // A teammate person who already has the ball keeps it: don't crowd them
+  if (mates.some((q) => !q.bot && dist(q) < 45 && dist(q) < cd)) chaser = null;
+
+  if (p.slot === 0) {
+    // Keeper: stay on the line between ball and goal, come out when the ball is close
+    const near = Math.abs(b.x - ownX) < 190 && Math.abs(b.y - FH / 2) < 210;
+    if (near && dist(p) < cd + 10) attack = true;
+    else {
+      // Shot coming? Go to where it will cross the line
+      const lineX = ownX + dir * 24;
+      let ty = FH / 2 + (b.y - FH / 2) * 0.55;
+      if (b.vx * dir < -150) ty = b.y + b.vy * ((lineX - b.x) / b.vx);
+      target = { x: lineX, y: clamp(ty, FH / 2 - GOAL_H / 2 + 12, FH / 2 + GOAL_H / 2 - 12) };
+      p.keeperRush = true;
+    }
+  } else if (p === chaser) {
+    attack = true;
+  } else {
+    // Hold position, sliding with the ball like a real team shape
+    const home = slotPos(p.team, p.slot);
+    target = {
+      x: clamp(home.x + (b.x - FW / 2) * 0.55, 40, FW - 40),
+      y: clamp(home.y * 0.7 + b.y * 0.3 + Math.sin(sim.tick / 90 + p.wobble) * 15, 30, FH - 30),
+    };
+    // Stay goal-side: never further up than the ball when defending
+    if (p.slot <= 2 && (b.x - target.x) * dir < 60) target.x = b.x - dir * 90;
+  }
+
+  p.kick = false;
+  if (attack) {
+    // Aim at the far side of the goal, get behind the ball, then run through it
+    const aimY = FH / 2 + (b.y < FH / 2 ? 45 : -45) * (Math.sin(p.wobble) > 0 ? 1 : -1);
+    let ax = oppX - b.x, ay = aimY - b.y; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
+    const tbx = b.x - p.x, tby = b.y - p.y, td = Math.hypot(tbx, tby) || 1;
+    const align = (tbx * ax + tby * ay) / td;
+    const behind = { x: b.x - ax * (PR + BR + 4), y: b.y - ay * (PR + BR + 4) };
+    if (align < 0.4 && td < 70) {
+      // On the wrong side of the ball: go round it
+      const side = (tbx * ay - tby * ax) > 0 ? 1 : -1;
+      target = { x: behind.x - ay * side * 34, y: behind.y + ax * side * 34 };
+    } else if (td < PR + BR + 10) {
+      target = { x: b.x + ax * 30, y: b.y + ay * 30 };          // dribble forward
+    } else {
+      // Lead the ball a little if it is moving
+      target = { x: behind.x + b.vx * 0.12, y: behind.y + b.vy * 0.12 };
+    }
+    const toGoal = Math.abs(oppX - b.x);
+    const pressed = all.some((q) => q.team !== p.team && Math.hypot(q.x - b.x, q.y - b.y) < 55);
+    const ownHalf = (b.x - FW / 2) * dir < 0;
+    if (align > 0.82 && td < PR + BR + 7 && (toGoal < 420 || pressed || (ownHalf && Math.random() < 0.05))) p.kick = true;
+  }
+
+  const dx = target.x - p.x, dy = target.y - p.y, d = Math.hypot(dx, dy);
+  const sp = (attack || p.keeperRush ? 0.92 : 0.8) * Math.min(1, d / 25);
+  p.keeperRush = false;
+  p.ix = d > 2 ? (dx / d) * sp : 0; p.iy = d > 2 ? (dy / d) * sp : 0;
+}
 
 // ---- physics ----
 function collideCircle(a, b, ra, rb, ma, mb, e) {
@@ -492,8 +613,9 @@ const POSTS = [
 
 function step() {
   const b = sim.ball;
-  const active = [...sim.players.values()].filter((p) => p.team !== "s");
+  const active = onPitch();
   const frozen = sim.phase === "kickoff";
+  if (!frozen) for (const p of sim.bots) botThink(p, active);
 
   // Players run
   for (const p of active) {
@@ -531,7 +653,7 @@ function step() {
       if (d < PR + BR + 7 && d > 0) {
         b.vx += (dx / d) * 560 + p.vx * 0.25;
         b.vy += (dy / d) * 560 + p.vy * 0.25;
-        p.kcd = 0.3;
+        p.kcd = 0.3; p.lastKick = sim.tick;
         sim.events.push("k");
       }
     }
@@ -566,11 +688,12 @@ function step() {
     if (scored) {
       if (sim.phase === "warm") { Object.assign(b, { x: FW / 2, y: FH / 2, vx: 0, vy: 0 }); return; }
       sim.score[scored === "r" ? 0 : 1]++;
+      sim.kickTeam = scored === "r" ? "b" : "r";        // the team that let it in kicks off
       sim.scorer = TEAM_NAME[scored];
       // Credit the last player of that team who was closest to the ball
       let best = null, bd = 1e9;
       for (const p of active) if (p.team === scored) { const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < bd) { bd = d; best = p; } }
-      if (best) sim.scorer = best.name;
+      if (best) sim.scorer = best.bot ? TEAM_NAME[scored] + " #" + SLOTS[best.slot].num : best.name;
       sim.phase = "goal"; sim.phaseT = 2.5;
       sim.events.push("g");
     }
@@ -609,11 +732,13 @@ function hostLoop() {
 }
 
 const r1 = (v) => Math.round(v * 10) / 10;
+// 1 = holding kick, 2 = just kicked the ball
+function playerFlags(p) { return (p.kick ? 1 : 0) | (p.lastKick && sim.tick - p.lastKick < 12 ? 2 : 0); }
 function sendState() {
   const msg = {
     t: "s", T: Math.round(performance.now()),
     b: [r1(sim.ball.x), r1(sim.ball.y)],
-    p: [...sim.players.values()].filter((p) => p.team !== "s").map((p) => [p.id, r1(p.x), r1(p.y), p.kick ? 1 : 0]),
+    p: onPitch().map((p) => [p.id, r1(p.x), r1(p.y), playerFlags(p), p.team === "r" ? 0 : 1, p.slot]),
     sc: sim.score, tl: Math.ceil(sim.timeLeft), ph: sim.phase, pt: r1(sim.phaseT), sn: sim.scorer,
   };
   if (sim.events.length) { msg.e = sim.events; sim.events.forEach(playEvent); sim.events = []; }
@@ -664,7 +789,7 @@ function onHostData(m) {
   if (m.t === "w") { myId = m.id; }
   else if (m.t === "r") {
     roster = m.L.map(([id, name, team]) => ({ id, name, team }));
-    matchLen = m.ml;
+    matchLen = m.ml; botsOn = !!m.bo;
     updateMenu();
   } else if (m.t === "s") {
     const now = performance.now();
@@ -705,15 +830,14 @@ function clientView() {
   view.players = b.p.map((q) => {
     const o = pa.get(q[0]) || q;
     const r = roster.find((r) => r.id === q[0]);
-    return { id: q[0], x: lerp(o[1], q[1]), y: lerp(o[2], q[2]), k: q[3], team: r ? r.team : "r", name: r ? r.name : "" };
+    return { id: q[0], x: lerp(o[1], q[1]), y: lerp(o[2], q[2]), k: q[3], team: q[4] ? "b" : "r", slot: q[5], name: r ? r.name : "" };
   });
   const last = snaps[snaps.length - 1];
   view.score = last.sc; view.phase = last.ph; view.phaseT = last.pt; view.timeLeft = last.tl; view.scorer = last.sn;
 }
 function hostView() {
   view.ball = { x: sim.ball.x, y: sim.ball.y };
-  view.players = [...sim.players.values()].filter((p) => p.team !== "s")
-    .map((p) => ({ id: p.id, x: p.x, y: p.y, k: p.kick, team: p.team, name: p.name }));
+  view.players = onPitch().map((p) => ({ id: p.id, x: p.x, y: p.y, k: playerFlags(p), team: p.team, slot: p.slot, name: p.name }));
   view.score = sim.score; view.phase = sim.phase; view.phaseT = sim.phaseT; view.timeLeft = sim.timeLeft; view.scorer = sim.scorer;
 }
 
@@ -746,6 +870,16 @@ function updateMenu() {
     const tm = document.createElement("span"); tm.className = "small"; tm.textContent = TEAM_NAME[team];
     row.append(dot, nm, tm); list.append(row);
   }
+  if (botsOn) {
+    const hr = roster.filter((q) => q.team === "r").length, hb = roster.filter((q) => q.team === "b").length;
+    const n = Math.max(0, 5 - hr) + Math.max(0, 5 - hb);
+    if (n) {
+      const row = document.createElement("div"); row.className = "pl small";
+      row.textContent = "🤖 + " + n + " computer players (Red " + Math.max(0, 5 - hr) + ", Blue " + Math.max(0, 5 - hb) + ")";
+      list.append(row);
+    }
+  }
+  $("btnBots").textContent = "🤖 Computer players: " + (botsOn ? "ON" : "OFF");
   $("lenSel").value = String(matchLen);
 }
 
@@ -927,21 +1061,113 @@ function drawPitch() {
   for (const p of POSTS) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x, p.y, POST_R, 0, Math.PI * 2); ctx.fill(); }
 }
 
-function drawPlayers() {
-  for (const p of view.players) {
-    // shadow
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
-    ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 4, PR, PR * 0.85, 0, 0, Math.PI * 2); ctx.fill();
-    if (p.id === myId) {
-      ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(p.x, p.y, PR + 7, 0, Math.PI * 2); ctx.stroke();
-    }
-    ctx.fillStyle = TEAM_COLOR[p.team] || "#888";
-    ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = p.k ? "#fff" : "rgba(0,0,0,0.5)"; ctx.lineWidth = p.k ? 4 : 2;
-    ctx.stroke();
-    uprightText(p.name, p.x, p.y, 14, "#fff", true, PR + 13);
+// Running animation is worked out from how each player moves, so it looks
+// the same on every phone without sending extra data.
+const anim = new Map();   // id -> {a: facing angle, ph: stride, x, y, sp: speed}
+let lastFrameAt = performance.now(), frameDt = 1 / 60;
+function animate(p) {
+  let a = anim.get(p.id);
+  if (!a) { a = { a: p.team === "r" ? 0 : Math.PI, ph: Math.random() * 6, x: p.x, y: p.y, sp: 0 }; anim.set(p.id, a); }
+  const dx = p.x - a.x, dy = p.y - a.y, moved = Math.hypot(dx, dy);
+  a.sp += (moved / Math.max(frameDt, 0.001) - a.sp) * 0.25;
+  let want;
+  if (moved > 0.4) want = Math.atan2(dy, dx);
+  else want = Math.atan2(view.ball.y - p.y, view.ball.x - p.x);     // standing: look at the ball
+  let diff = ((want - a.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+  a.a += diff * (moved > 0.4 ? 0.3 : 0.08);
+  a.ph += moved * 0.16;
+  if (moved < 0.2) a.ph *= 0.85;                                     // feet come together when standing
+  a.x = p.x; a.y = p.y;
+  return a;
+}
+
+function kitColors(p) {
+  if (p.slot === 0) return p.team === "r" ? { shirt: "#21b36b", trim: "#0d6b3c", shorts: "#111" } : { shirt: "#ff9f1c", trim: "#a85f00", shorts: "#111" };
+  return p.team === "r" ? { shirt: "#e63946", trim: "#9d1823", shorts: "#fff" } : { shirt: "#3a86ff", trim: "#1747a6", shorts: "#0d1b3d" };
+}
+
+function drawFootballer(p) {
+  const A = animate(p);
+  const k = Math.abs(p.id) * 7 + (p.team === "b" ? 3 : 0);
+  const skin = SKIN[k % SKIN.length], hair = HAIR[(k >> 1) % HAIR.length];
+  const kit = kitColors(p);
+  const swing = Math.sin(A.ph) * Math.min(1, A.sp / 120);
+  const kicking = p.k & 2;
+
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.beginPath(); ctx.ellipse(p.x + 4, p.y + 5, 13, 17, A.a, 0, Math.PI * 2); ctx.fill();
+
+  // My player: a ring on the grass
+  if (p.id === myId) {
+    ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(p.x, p.y, PR + 8, 0, Math.PI * 2); ctx.stroke();
+    // little arrow showing where I'm facing
+    ctx.fillStyle = "#ffd23f";
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(A.a);
+    ctx.beginPath(); ctx.moveTo(PR + 17, 0); ctx.lineTo(PR + 10, -5); ctx.lineTo(PR + 10, 5); ctx.fill();
+    ctx.restore();
   }
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(A.a);           // from here on, +x is the way the player faces
+
+  // Legs and boots
+  const legs = [
+    { side: -1, fwd: 2 + swing * 14 },
+    { side: 1, fwd: kicking ? 20 : 2 - swing * 14 },
+  ];
+  for (const L of legs) {
+    const hy = L.side * 5.5, fx = L.fwd, fy = L.side * 6.5;
+    ctx.strokeStyle = kit.trim; ctx.lineWidth = 5.5; ctx.lineCap = "round";     // socks
+    ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.fillStyle = "#151515";                                                  // boot
+    ctx.beginPath(); ctx.ellipse(fx + 2.5, fy, 5.5, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";                                                     // boot stripe
+    ctx.fillRect(fx + 0.5, fy - 0.8, 3.5, 1.6);
+  }
+
+  // Shorts
+  ctx.fillStyle = kit.shorts;
+  ctx.beginPath(); ctx.ellipse(-1, 0, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Arms swing opposite to the legs
+  for (const side of [-1, 1]) {
+    const ax = -side * swing * 6 + 1;
+    ctx.fillStyle = kit.shirt;
+    ctx.beginPath(); ctx.ellipse(ax * 0.5, side * 14, 4.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = p.slot === 0 ? "#f5f5f5" : skin;                            // keeper gloves
+    ctx.beginPath(); ctx.arc(ax + 2, side * 16.5, 3.2, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Shirt (shoulders seen from above)
+  ctx.fillStyle = kit.shirt;
+  ctx.beginPath(); ctx.ellipse(0, 0, 8.5, 15, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = kit.trim; ctx.lineWidth = 2; ctx.stroke();
+  // collar
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(1, 0, 7.5, -0.9, 0.9); ctx.stroke();
+
+  // Head and hair
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(1.5, 0, 6.8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = hair;
+  ctx.beginPath(); ctx.arc(0.5, 0, 6.8, Math.PI * 0.55, Math.PI * 1.45); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-0.5, 0, 5, 6.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // Name under people, shirt number under computer players
+  if (p.name) uprightText(p.name, p.x, p.y, 13, p.id === myId ? "#ffd23f" : "#fff", true, PR + 14);
+  else if (SLOTS[p.slot]) uprightText(String(SLOTS[p.slot].num), p.x, p.y, 10, "rgba(255,255,255,0.75)", true, PR + 11);
+}
+
+function drawPlayers() {
+  // Draw from the top of the screen down so nearer players overlap correctly
+  const list = [...view.players].sort((a, b) => a.y - b.y);
+  for (const p of list) drawFootballer(p);
+  // Forget players who have left
+  if (anim.size > 40) for (const id of anim.keys()) if (!view.players.some((p) => p.id === id)) anim.delete(id);
 }
 
 function drawBall() {
@@ -1001,6 +1227,7 @@ function drawControls() {
 }
 
 function frame() {
+  const nowF = performance.now(); frameDt = Math.min(0.1, (nowF - lastFrameAt) / 1000); lastFrameAt = nowF;
   if (role === "host") hostView();
   else if (role === "client") clientView();
 
