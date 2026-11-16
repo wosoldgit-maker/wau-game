@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Jom Bola</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jom Bola">
+<meta name="theme-color" content="#1d5e2b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+
+<style>
+  :root {
+    --red: #e63946;
+    --blue: #3a86ff;
+    --ink: #10231a;
+    --panel: rgba(12, 30, 20, 0.92);
+    --line: rgba(255, 255, 255, 0.18);
+  }
+  html, body {
+    margin: 0; width: 100%; height: 100%; overflow: hidden; position: fixed;
+    background: #164d24; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    touch-action: none; overscroll-behavior: none;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  button {
+    font: inherit; color: inherit; border: 0; cursor: pointer;
+    border-radius: 12px; padding: 12px 16px; font-weight: 700;
+    background: rgba(255,255,255,0.14);
+  }
+  button:active { transform: scale(0.97); }
+  button.primary { background: #ffd23f; color: #222; }
+  button.red { background: var(--red); }
+  button.blue { background: var(--blue); }
+  button.on { outline: 3px solid #ffd23f; }
+  input {
+    font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 12px;
+    border: 2px solid var(--line); background: rgba(0,0,0,0.3); color: #fff;
+    width: 100%; box-sizing: border-box; -webkit-user-select: text; user-select: text;
+  }
+  input:focus { outline: none; border-color: #ffd23f; }
+  .hidden { display: none !important; }
+
+  /* Top bar */
+  #hud {
+    position: fixed; left: 0; right: 0; top: 0;
+    padding: calc(env(safe-area-inset-top) + 6px) 10px 6px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    pointer-events: none;
+  }
+  #hud button { pointer-events: auto; padding: 8px 12px; background: rgba(0,0,0,0.35); }
+  #board {
+    display: flex; align-items: stretch; border-radius: 10px; overflow: hidden;
+    font-weight: 800; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  #board span { padding: 6px 12px; min-width: 22px; text-align: center; }
+  #scR { background: var(--red); }
+  #scB { background: var(--blue); }
+  #clock { background: #111; font-variant-numeric: tabular-nums; min-width: 52px !important; }
+
+  /* Overlays */
+  .overlay {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(5, 20, 10, 0.55); padding: 16px; box-sizing: border-box;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    padding: 20px; width: 100%; max-width: 380px; max-height: 100%; overflow-y: auto;
+    box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4); touch-action: pan-y;
+  }
+  .card h1 { margin: 0; font-size: 34px; text-align: center; }
+  .card h2 { margin: 0; font-size: 22px; text-align: center; }
+  .card p { margin: 0; opacity: 0.85; line-height: 1.4; text-align: center; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .small { font-size: 13px; opacity: 0.7; text-align: center; }
+  .label { font-size: 13px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; }
+  #linkBox {
+    background: rgba(0,0,0,0.35); border-radius: 10px; padding: 10px 12px;
+    word-break: break-all; font-family: ui-monospace, Menlo, monospace; font-size: 14px;
+    -webkit-user-select: all; user-select: all;
+  }
+  #roomCode { font-size: 30px; font-weight: 800; letter-spacing: 0.2em; text-align: center; }
+  .plist { display: flex; flex-direction: column; gap: 4px; }
+  .pl { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.06); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  select { font: inherit; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.35); color: #fff; border: 2px solid var(--line); }
+
+  #toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 20px);
+    transform: translateX(-50%); background: rgba(0,0,0,0.75); padding: 10px 16px;
+    border-radius: 999px; font-weight: 600; pointer-events: none; opacity: 0;
+    transition: opacity 0.3s; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <button id="btnInvite">🔗 Invite</button>
+  <div id="board"><span id="scR">0</span><span id="clock">3:00</span><span id="scB">0</span></div>
+  <button id="btnMenu">☰</button>
+</div>
+
+<!-- Start screen -->
+<div id="start" class="overlay">
+  <div class="card">
+    <h1>⚽ Jom Bola</h1>
+    <p>Football with your friends. One person makes a game and sends the link. Everyone who opens the link joins.</p>
+    <div class="label">Your name</div>
+    <input id="nameIn" maxlength="12" placeholder="e.g. Ali" autocomplete="off">
+    <div id="joinBlock" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+      <button id="btnJoin" class="primary">Join game <span id="joinCode"></span></button>
+      <button id="btnCreate2">Make my own game instead</button>
+    </div>
+    <div id="createBlock" style="display:flex;flex-direction:column;gap:12px">
+      <button id="btnCreate" class="primary">Create game</button>
+      <div class="label" style="text-align:center">or join with a code</div>
+      <div class="row">
+        <input id="codeIn" maxlength="5" placeholder="CODE" autocomplete="off" style="text-transform:uppercase">
+        <button id="btnCode" style="flex:0 0 auto">Join</button>
+      </div>
+    </div>
+    <div id="startMsg" class="small"></div>
+  </div>
+</div>
+
+<!-- Invite -->
+<div id="invite" class="overlay hidden">
+  <div class="card">
+    <h2>Invite friends</h2>
+    <p>Send this link. Anyone who opens it joins your game.</p>
+    <div id="roomCode"></div>
+    <div id="linkBox"></div>
+    <div class="row">
+      <button id="btnCopy" class="primary">Copy link</button>
+      <button id="btnShare">Share…</button>
+    </div>
+    <p class="small">Keep this tab open: your phone runs the match. If you close it, the game ends for everyone.</p>
+    <button id="btnInviteClose">Done</button>
+  </div>
+</div>
+
+<!-- Menu -->
+<div id="menu" class="overlay hidden">
+  <div class="card">
+    <h2>Team</h2>
+    <div class="row">
+      <button id="tR" class="red">Red</button>
+      <button id="tB" class="blue">Blue</button>
+      <button id="tS">Watch</button>
+    </div>
+    <div class="label">Players</div>
+    <div id="plist" class="plist"></div>
+    <div id="hostCtl" class="hidden" style="display:flex;flex-direction:column;gap:10px">
+      <div class="label">Match (you are the host)</div>
+      <div class="row">
+        <select id="lenSel">
+          <option value="120">2 minutes</option>
+          <option value="180" selected>3 minutes</option>
+          <option value="300">5 minutes</option>
+          <option value="600">10 minutes</option>
+        </select>
+        <button id="btnRestart">Restart match</button>
+      </div>
+    </div>
+    <div class="small" id="helpTxt"></div>
+    <div class="row">
+      <button id="btnLeave">Leave</button>
+      <button id="btnMenuClose" class="primary">Back to game</button>
+    </div>
+  </div>
+</div>
+
+<!-- Full time -->
+<div id="end" class="overlay hidden" style="background:rgba(5,20,10,0.35)">
+  <div class="card">
+    <h2>Full time!</h2>
+    <div id="endScore" style="font-size:40px;font-weight:800;text-align:center"></div>
+    <p id="endWin"></p>
+    <button id="btnAgain" class="primary">Play again</button>
+    <p id="endWait" class="small">Waiting for the host to start again…</p>
+  </div>
+</div>
+
+<!-- Disconnected / error -->
+<div id="err" class="overlay hidden">
+  <div class="card">
+    <h2 id="errTitle">Can't connect</h2>
+    <p id="errMsg"></p>
+    <button id="btnRetry" class="primary">Try again</button>
+    <button id="btnNew">Create a new game</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="peerjs.min.js"></script>
+<script>
+"use strict";
+
+// =====================================================================
+//  Field and physics settings (world units, roughly pixels on a laptop)
+// =====================================================================
+const FW = 1000, FH = 600;          // pitch size
+const GOAL_H = 170, GOAL_D = 45;    // goal mouth height and net depth
+const PR = 17, BR = 10, POST_R = 6; // player, ball and post radius
+const MARGIN = 30;                  // how far players can go past the lines
+const STEP = 1 / 60;                // physics step
+const MAX_BODIES = 10;              // 5 a side, the rest watch
+const ID_PREFIX = "jombola-";
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const TEAM_COLOR = { r: "#e63946", b: "#3a86ff" };
+const TEAM_NAME = { r: "Red", b: "Blue", s: "Watching" };
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// =====================================================================
+//  Shared game state
+// =====================================================================
+let role = null;          // "host" or "client"
+let myId = null;          // my player id (host is 0)
+let roomCode = "";
+let peer = null;
+let hostConn = null;      // client: connection to host
+let roster = [];          // [{id, name, team}]
+let matchLen = 180;
+
+// Host-side simulation state
+const sim = {
+  players: new Map(),     // id -> {id, name, team, x, y, vx, vy, kick, kcd, ix, iy, conn}
+  ball: { x: FW / 2, y: FH / 2, vx: 0, vy: 0 },
+  score: [0, 0],
+  phase: "warm",          // warm | kickoff | play | goal | end
+  phaseT: 0,              // seconds left in kickoff/goal phase
+  timeLeft: 180,
+  scorer: "",
+  events: [],
+  nextId: 1,
+  tick: 0,
+};
+
+// What we draw (host copies from sim, client fills from snapshots)
+let view = { ball: { x: FW / 2, y: FH / 2 }, players: [], score: [0, 0], phase: "warm", phaseT: 0, timeLeft: 180, scorer: "" };
+
+// =====================================================================
+//  Sound (tiny WebAudio blips, no files)
+// =====================================================================
+let actx = null;
+function initAudio() {
+  if (actx) return;
+  try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+}
+function tone(freq, dur, type = "sine", vol = 0.15, slide = 0) {
+  if (!actx) return;
+  const t = actx.currentTime;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
+}
+function playEvent(e) {
+  if (e === "k") tone(180, 0.09, "triangle", 0.25, -100);
+  else if (e === "w") { tone(2600, 0.15, "square", 0.05); setTimeout(() => tone(2600, 0.35, "square", 0.05), 180); }
+  else if (e === "g") { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.25, "triangle", 0.18), i * 110)); }
+  else if (e === "e") { [0, 300, 600].forEach((d, i) => setTimeout(() => tone(2600, i === 2 ? 0.8 : 0.25, "square", 0.05), d)); }
+}
+
+// =====================================================================
+//  Small UI helpers
+// =====================================================================
+let toastTimer = 0;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function show(id, on = true) { $(id).classList.toggle("hidden", !on); }
+function cleanName(n) { return String(n || "").replace(/[<>]/g, "").trim().slice(0, 12) || "Player"; }
+function makeCode() { let c = ""; for (let i = 0; i < 5; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return c; }
+function gameLink() { return location.origin + location.pathname + "?room=" + roomCode; }
+function fmtTime(s) { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+
+// Optional: ?ps=host:port points at a self-hosted PeerJS server (used for testing)
+function peerOptions() {
+  const ps = new URLSearchParams(location.search).get("ps");
+  if (!ps) return { debug: 0 };
+  const [host, port] = ps.split(":");
+  return { host, port: Number(port || 9000), path: "/", secure: location.protocol === "https:", debug: 0 };
+}
+
+// =====================================================================
+//  Start screen
+// =====================================================================
+const params = new URLSearchParams(location.search);
+const linkRoom = (params.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+try { $("nameIn").value = localStorage.getItem("jombola-name") || ""; } catch (e) {}
+
+if (linkRoom) {
+  show("joinBlock"); show("createBlock", false);
+  $("joinCode").textContent = linkRoom;
+}
+
+function myName() {
+  const n = cleanName($("nameIn").value);
+  try { localStorage.setItem("jombola-name", n); } catch (e) {}
+  return n;
+}
+$("btnCreate").onclick = $("btnCreate2").onclick = () => { initAudio(); startHost(myName()); };
+$("btnJoin").onclick = () => { initAudio(); startClient(myName(), linkRoom); };
+$("btnCode").onclick = () => {
+  const c = $("codeIn").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (c.length !== 5) { $("startMsg").textContent = "The code has 5 letters."; return; }
+  initAudio(); startClient(myName(), c);
+};
+$("btnRetry").onclick = () => location.reload();
+$("btnNew").onclick = () => { location.href = location.pathname + (params.get("ps") ? "?ps=" + params.get("ps") : ""); };
+$("btnLeave").onclick = () => { if (peer) peer.destroy(); location.href = location.pathname + (params.get("ps") ? "?ps=" + params.get("ps") : ""); };
+
+function showError(title, msg) {
+  $("errTitle").textContent = title; $("errMsg").textContent = msg;
+  show("start", false); show("menu", false); show("invite", false); show("end", false); show("err");
+}
+
+function enterGame() {
+  show("start", false); show("hud");
+  $("helpTxt").textContent = isTouch
+    ? "Left side of the screen: drag to run. Right side: hold to kick."
+    : "Arrow keys or WASD to run. Space or X to kick.";
+}
+
+// =====================================================================
+//  HOST: runs the match and sends it to everyone
+// =====================================================================
+function startHost(name, tries = 0) {
+  $("startMsg").textContent = "Creating game…";
+  roomCode = makeCode();
+  peer = new Peer(ID_PREFIX + roomCode, peerOptions());
+  peer.on("open", () => {
+    role = "host"; myId = 0;
+    addPlayer(0, name, null);
+    history.replaceState(null, "", "?room=" + roomCode + (params.get("ps") ? "&ps=" + params.get("ps") : ""));
+    enterGame();
+    show("hostCtl");
+    openInvite();
+    setInterval(hostLoop, 1000 / 60);
+  });
+  peer.on("connection", onClientConnection);
+  peer.on("disconnected", () => { try { peer.reconnect(); } catch (e) {} });
+  peer.on("error", (err) => {
+    if (err.type === "unavailable-id" && tries < 4) { peer.destroy(); startHost(name, tries + 1); return; }
+    if (role === "host" && (err.type === "peer-unavailable" || err.type === "network")) return;
+    if (role !== "host") showError("Can't create game", "Could not reach the game server. Check your internet and try again. (" + err.type + ")");
+  });
+}
+
+function onClientConnection(conn) {
+  let pid = null;
+  conn.on("data", (m) => {
+    if (!m || typeof m !== "object") return;
+    if (pid !== null && sim.players.has(pid)) sim.players.get(pid).seen = performance.now();
+    if (m.t === "h" && pid === null) {
+      pid = sim.nextId++;
+      addPlayer(pid, cleanName(m.n), conn);
+      sendTo(conn, { t: "w", id: pid, code: roomCode });
+      toast(cleanName(m.n) + " joined");
+    } else if (pid !== null) {
+      const p = sim.players.get(pid);
+      if (!p) return;
+      if (m.t === "i") {
+        p.ix = clamp(+m.x || 0, -1, 1); p.iy = clamp(+m.y || 0, -1, 1); p.kick = !!m.k;
+      } else if (m.t === "tm") {
+        setTeam(p, m.v);
+      }
+    }
+  });
+  const gone = () => {
+    if (pid === null || !sim.players.has(pid)) return;
+    toast(sim.players.get(pid).name + " left");
+    sim.players.delete(pid);
+    afterRosterChange();
+  };
+  conn.on("close", gone);
+  conn.on("error", gone);
+}
+
+// Phones that lock or lose signal don't always close the connection, so
+// drop anyone the host hasn't heard from for 6 seconds.
+setInterval(() => {
+  if (role !== "host") return;
+  const now = performance.now();
+  for (const p of [...sim.players.values()]) {
+    if (p.conn && now - p.seen > 6000) {
+      sim.players.delete(p.id);
+      try { p.conn.close(); } catch (e) {}
+      toast(p.name + " left");
+      afterRosterChange();
+    }
+  }
+}, 1000);
+
+function sendTo(conn, msg) { try { if (conn && conn.open) conn.send(msg); } catch (e) {} }
+function broadcast(msg) { for (const p of sim.players.values()) if (p.conn) sendTo(p.conn, msg); }
+
+function teamCount(t) { let n = 0; for (const p of sim.players.values()) if (p.team === t) n++; return n; }
+function bodies() { return teamCount("r") + teamCount("b"); }
+
+function addPlayer(id, name, conn) {
+  let team = "s";
+  if (bodies() < MAX_BODIES) team = teamCount("r") <= teamCount("b") ? "r" : "b";
+  const p = { id, name, team, x: 0, y: 0, vx: 0, vy: 0, ix: 0, iy: 0, kick: false, kcd: 0, conn, seen: performance.now() };
+  sim.players.set(id, p);
+  placeAtSpawn(p);
+  afterRosterChange();
+}
+
+function setTeam(p, t) {
+  if (!["r", "b", "s"].includes(t) || p.team === t) return;
+  if (t !== "s" && p.team === "s" && bodies() >= MAX_BODIES) { if (p.id === myId) toast("Teams are full (5 a side)"); return; }
+  p.team = t; p.vx = p.vy = 0;
+  placeAtSpawn(p);
+  afterRosterChange();
+}
+
+function afterRosterChange() {
+  roster = [...sim.players.values()].map((p) => ({ id: p.id, name: p.name, team: p.team }));
+  broadcast({ t: "r", L: roster.map((p) => [p.id, p.name, p.team]), ml: matchLen });
+  // Match starts on its own once both teams have someone
+  const both = teamCount("r") > 0 && teamCount("b") > 0;
+  if (sim.phase === "warm" && both) startMatch();
+  if (sim.phase !== "warm" && sim.phase !== "end" && !both) { sim.phase = "warm"; resetPositions(); }
+  updateMenu();
+}
+
+// Kick-off formation, as fractions of the pitch (for the red side)
+const FORMATION = [[0.40, 0.50], [0.28, 0.25], [0.28, 0.75], [0.12, 0.50], [0.20, 0.50]];
+function placeAtSpawn(p) {
+  const mates = [...sim.players.values()].filter((q) => q.team === p.team);
+  const i = Math.max(0, mates.indexOf(p)) % FORMATION.length;
+  const f = FORMATION[i];
+  p.x = (p.team === "b" ? 1 - f[0] : f[0]) * FW;
+  p.y = f[1] * FH;
+}
+function resetPositions() {
+  for (const p of sim.players.values()) { placeAtSpawn(p); p.vx = p.vy = 0; }
+  Object.assign(sim.ball, { x: FW / 2, y: FH / 2, vx: 0, vy: 0 });
+}
+function startMatch() {
+  sim.score = [0, 0]; sim.timeLeft = matchLen;
+  resetPositions();
+  sim.phase = "kickoff"; sim.phaseT = 3;
+  show("end", false);
+}
+
+$("lenSel").onchange = () => { matchLen = +$("lenSel").value; afterRosterChange(); };
+$("btnRestart").onclick = () => {
+  if (teamCount("r") && teamCount("b")) { startMatch(); show("menu", false); toast("New match!"); }
+  else toast("Need at least one player on each team");
+};
+$("btnAgain").onclick = () => { if (role === "host") { if (teamCount("r") && teamCount("b")) startMatch(); else { sim.phase = "warm"; resetPositions(); show("end", false); } } };
+
+// ---- physics ----
+function collideCircle(a, b, ra, rb, ma, mb, e) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const d = Math.hypot(dx, dy);
+  if (d >= ra + rb || d === 0) return false;
+  const nx = dx / d, ny = dy / d, over = ra + rb - d;
+  const ia = 1 / ma, ib = 1 / mb;
+  a.x -= nx * over * ia / (ia + ib); a.y -= ny * over * ia / (ia + ib);
+  b.x += nx * over * ib / (ia + ib); b.y += ny * over * ib / (ia + ib);
+  const rv = ((b.vx || 0) - (a.vx || 0)) * nx + ((b.vy || 0) - (a.vy || 0)) * ny;
+  if (rv < 0) {
+    const j = -(1 + e) * rv / (ia + ib);
+    if (ma !== Infinity) { a.vx -= j * ia * nx; a.vy -= j * ia * ny; }
+    b.vx += j * ib * nx; b.vy += j * ib * ny;
+  }
+  return true;
+}
+const POSTS = [
+  { x: 0, y: FH / 2 - GOAL_H / 2 }, { x: 0, y: FH / 2 + GOAL_H / 2 },
+  { x: FW, y: FH / 2 - GOAL_H / 2 }, { x: FW, y: FH / 2 + GOAL_H / 2 },
+];
+
+function step() {
+  const b = sim.ball;
+  const active = [...sim.players.values()].filter((p) => p.team !== "s");
+  const frozen = sim.phase === "kickoff";
+
+  // Players run
+  for (const p of active) {
+    let ix = p.ix, iy = p.iy;
+    const len = Math.hypot(ix, iy);
+    if (len > 1) { ix /= len; iy /= len; }
+    const top = p.kick ? 205 : 245;
+    const k = Math.min(1, 10 * STEP);
+    p.vx += (ix * top - p.vx) * k;
+    p.vy += (iy * top - p.vy) * k;
+    if (frozen) p.vx = p.vy = 0;
+    p.x += p.vx * STEP; p.y += p.vy * STEP;
+    p.kcd = Math.max(0, p.kcd - STEP);
+  }
+  // Players bump into each other and the posts
+  for (let i = 0; i < active.length; i++)
+    for (let j = i + 1; j < active.length; j++) collideCircle(active[i], active[j], PR, PR, 1, 1, 0.3);
+  for (const p of active) {
+    for (const post of POSTS) collideCircle(post, p, POST_R, PR, Infinity, 1, 0.3);
+    p.x = clamp(p.x, -MARGIN, FW + MARGIN);
+    p.y = clamp(p.y, -MARGIN, FH + MARGIN);
+  }
+
+  if (frozen) return;
+
+  // Ball moves and slows down
+  b.x += b.vx * STEP; b.y += b.vy * STEP;
+  b.vx *= 0.986; b.vy *= 0.986;
+
+  // Ball against players, and kicks
+  for (const p of active) {
+    collideCircle(p, b, PR, BR, 4, 1, 0.4);
+    if (p.kick && p.kcd <= 0) {
+      const dx = b.x - p.x, dy = b.y - p.y, d = Math.hypot(dx, dy);
+      if (d < PR + BR + 7 && d > 0) {
+        b.vx += (dx / d) * 560 + p.vx * 0.25;
+        b.vy += (dy / d) * 560 + p.vy * 0.25;
+        p.kcd = 0.3;
+        sim.events.push("k");
+      }
+    }
+  }
+  const sp = Math.hypot(b.vx, b.vy);
+  if (sp > 950) { b.vx *= 950 / sp; b.vy *= 950 / sp; }
+
+  // Posts
+  for (const post of POSTS) collideCircle(post, b, POST_R, BR, Infinity, 1, 0.6);
+
+  // Walls and nets
+  const top = FH / 2 - GOAL_H / 2, bot = FH / 2 + GOAL_H / 2;
+  const inMouth = b.y > top && b.y < bot;
+  if (b.y < BR) { b.y = BR; b.vy = Math.abs(b.vy) * 0.7; }
+  if (b.y > FH - BR) { b.y = FH - BR; b.vy = -Math.abs(b.vy) * 0.7; }
+  if (b.x < BR && !inMouth && b.x > -BR) { b.x = BR; b.vx = Math.abs(b.vx) * 0.7; }
+  if (b.x > FW - BR && !inMouth && b.x < FW + BR) { b.x = FW - BR; b.vx = -Math.abs(b.vx) * 0.7; }
+  for (const side of [0, 1]) {
+    const inGoal = side === 0 ? b.x < 0 : b.x > FW;
+    if (!inGoal) continue;
+    if (b.y < top + BR) { b.y = top + BR; b.vy = Math.abs(b.vy) * 0.3; }
+    if (b.y > bot - BR) { b.y = bot - BR; b.vy = -Math.abs(b.vy) * 0.3; }
+    if (side === 0 && b.x < -GOAL_D + BR) { b.x = -GOAL_D + BR; b.vx = Math.abs(b.vx) * 0.2; }
+    if (side === 1 && b.x > FW + GOAL_D - BR) { b.x = FW + GOAL_D - BR; b.vx = -Math.abs(b.vx) * 0.2; }
+  }
+
+  // Goal? (the whole ball must cross the line)
+  if (sim.phase === "play" || sim.phase === "warm") {
+    let scored = null;
+    if (b.x < -BR) scored = "b";       // left goal is Red's
+    else if (b.x > FW + BR) scored = "r";
+    if (scored) {
+      if (sim.phase === "warm") { Object.assign(b, { x: FW / 2, y: FH / 2, vx: 0, vy: 0 }); return; }
+      sim.score[scored === "r" ? 0 : 1]++;
+      sim.scorer = TEAM_NAME[scored];
+      // Credit the last player of that team who was closest to the ball
+      let best = null, bd = 1e9;
+      for (const p of active) if (p.team === scored) { const d = Math.hypot(p.x - b.x, p.y - b.y); if (d < bd) { bd = d; best = p; } }
+      if (best) sim.scorer = best.name;
+      sim.phase = "goal"; sim.phaseT = 2.5;
+      sim.events.push("g");
+    }
+  }
+}
+
+function hostUpdate() {
+  // Host's own controls
+  const me = sim.players.get(0);
+  if (me) { const inp = readInput(); me.ix = inp.x; me.iy = inp.y; me.kick = inp.k; }
+
+  step();
+  if (sim.phase === "play") {
+    sim.timeLeft -= STEP;
+    if (sim.timeLeft <= 0) { sim.timeLeft = 0; sim.phase = "end"; sim.events.push("e"); }
+  } else if (sim.phase === "kickoff" || sim.phase === "goal") {
+    sim.phaseT -= STEP;
+    if (sim.phaseT <= 0) {
+      if (sim.phase === "goal") { resetPositions(); sim.phase = "kickoff"; sim.phaseT = 3; }
+      else { sim.phase = "play"; sim.events.push("w"); }
+    }
+  }
+}
+
+let hostLast = 0, hostAcc = 0;
+function hostLoop() {
+  const now = performance.now();
+  if (!hostLast) hostLast = now;
+  hostAcc += Math.min(0.25, (now - hostLast) / 1000);
+  hostLast = now;
+  while (hostAcc >= STEP) {
+    hostUpdate(); hostAcc -= STEP;
+    sim.tick++;
+    if (sim.tick % 2 === 0) sendState();
+  }
+}
+
+const r1 = (v) => Math.round(v * 10) / 10;
+function sendState() {
+  const msg = {
+    t: "s", T: Math.round(performance.now()),
+    b: [r1(sim.ball.x), r1(sim.ball.y)],
+    p: [...sim.players.values()].filter((p) => p.team !== "s").map((p) => [p.id, r1(p.x), r1(p.y), p.kick ? 1 : 0]),
+    sc: sim.score, tl: Math.ceil(sim.timeLeft), ph: sim.phase, pt: r1(sim.phaseT), sn: sim.scorer,
+  };
+  if (sim.events.length) { msg.e = sim.events; sim.events.forEach(playEvent); sim.events = []; }
+  broadcast(msg);
+}
+
+// =====================================================================
+//  CLIENT: sends controls, draws what the host sends
+// =====================================================================
+const snaps = [];
+let clockOffset = null, lastSnapAt = 0;
+
+function startClient(name, code, tries = 0) {
+  roomCode = code;
+  $("startMsg").textContent = "Connecting to " + code + "…";
+  peer = new Peer(peerOptions());
+  let opened = false;
+  const timer = setTimeout(() => {
+    if (opened) return;
+    if (tries < 1) { try { peer.destroy(); } catch (e) {} startClient(name, code, tries + 1); return; }
+    showError("Can't connect", "The game " + code + " did not answer. The host may have closed it, or the network is blocking it. Ask the host for a new link.");
+  }, 15000);
+  peer.on("open", () => {
+    hostConn = peer.connect(ID_PREFIX + code, { serialization: "json", reliable: true });
+    hostConn.on("open", () => {
+      opened = true; clearTimeout(timer);
+      role = "client";
+      hostConn.send({ t: "h", n: name });
+      enterGame();
+    });
+    hostConn.on("data", onHostData);
+    hostConn.on("close", () => { if (opened) showError("Game ended", "The host left or the connection dropped."); });
+  });
+  peer.on("error", (err) => {
+    if (err.type === "peer-unavailable") {
+      clearTimeout(timer);
+      showError("Game not found", "No game with code " + code + " is running. The host may have closed it. Ask them for a new link.");
+    } else if (!opened && err.type !== "disconnected") {
+      clearTimeout(timer);
+      showError("Can't connect", "Could not reach the game server. Check your internet and try again. (" + err.type + ")");
+    }
+  });
+  peer.on("disconnected", () => { /* signalling lost; the game connection itself can continue */ });
+}
+
+function onHostData(m) {
+  if (!m || typeof m !== "object") return;
+  if (m.t === "w") { myId = m.id; }
+  else if (m.t === "r") {
+    roster = m.L.map(([id, name, team]) => ({ id, name, team }));
+    matchLen = m.ml;
+    updateMenu();
+  } else if (m.t === "s") {
+    const now = performance.now();
+    const d = now - m.T;
+    if (clockOffset === null || d < clockOffset) clockOffset = d;
+    else clockOffset += (d - clockOffset) * 0.01;
+    snaps.push(m); lastSnapAt = now;
+    if (snaps.length > 40) snaps.shift();
+    if (m.e) m.e.forEach(playEvent);
+  }
+}
+
+let lastSent = "", lastSentAt = 0;
+function clientSendInput() {
+  if (!hostConn || !hostConn.open) return;
+  const inp = readInput();
+  const key = inp.x.toFixed(2) + "," + inp.y.toFixed(2) + "," + inp.k;
+  const now = performance.now();
+  if (key !== lastSent || now - lastSentAt > 250) {
+    hostConn.send({ t: "i", x: +inp.x.toFixed(2), y: +inp.y.toFixed(2), k: inp.k ? 1 : 0 });
+    lastSent = key; lastSentAt = now;
+  }
+}
+setInterval(() => { if (role === "client") clientSendInput(); }, 1000 / 30);
+
+const INTERP_MS = 90;
+function clientView() {
+  if (!snaps.length) return;
+  const rt = performance.now() - clockOffset - INTERP_MS;
+  let a = snaps[snaps.length - 1], b = a, f = 0;
+  for (let i = snaps.length - 1; i > 0; i--) {
+    if (snaps[i - 1].T <= rt) { a = snaps[i - 1]; b = snaps[i]; f = clamp((rt - a.T) / Math.max(1, b.T - a.T), 0, 1); break; }
+  }
+  if (rt < snaps[0].T) { a = b = snaps[0]; f = 0; }
+  const lerp = (x, y) => x + (y - x) * f;
+  const pa = new Map(a.p.map((p) => [p[0], p]));
+  view.ball = { x: lerp(a.b[0], b.b[0]), y: lerp(a.b[1], b.b[1]) };
+  view.players = b.p.map((q) => {
+    const o = pa.get(q[0]) || q;
+    const r = roster.find((r) => r.id === q[0]);
+    return { id: q[0], x: lerp(o[1], q[1]), y: lerp(o[2], q[2]), k: q[3], team: r ? r.team : "r", name: r ? r.name : "" };
+  });
+  const last = snaps[snaps.length - 1];
+  view.score = last.sc; view.phase = last.ph; view.phaseT = last.pt; view.timeLeft = last.tl; view.scorer = last.sn;
+}
+function hostView() {
+  view.ball = { x: sim.ball.x, y: sim.ball.y };
+  view.players = [...sim.players.values()].filter((p) => p.team !== "s")
+    .map((p) => ({ id: p.id, x: p.x, y: p.y, k: p.kick, team: p.team, name: p.name }));
+  view.score = sim.score; view.phase = sim.phase; view.phaseT = sim.phaseT; view.timeLeft = sim.timeLeft; view.scorer = sim.scorer;
+}
+
+// =====================================================================
+//  Menu, invite, full time
+// =====================================================================
+function myTeam() { const r = roster.find((p) => p.id === myId); return r ? r.team : "s"; }
+function chooseTeam(t) {
+  if (role === "host") setTeam(sim.players.get(0), t);
+  else if (hostConn) hostConn.send({ t: "tm", v: t });
+}
+$("tR").onclick = () => chooseTeam("r");
+$("tB").onclick = () => chooseTeam("b");
+$("tS").onclick = () => chooseTeam("s");
+$("btnMenu").onclick = () => { updateMenu(); show("menu"); };
+$("btnMenuClose").onclick = () => show("menu", false);
+
+function updateMenu() {
+  const t = myTeam();
+  $("tR").classList.toggle("on", t === "r");
+  $("tB").classList.toggle("on", t === "b");
+  $("tS").classList.toggle("on", t === "s");
+  const list = $("plist"); list.innerHTML = "";
+  for (const team of ["r", "b", "s"]) for (const p of roster.filter((q) => q.team === team)) {
+    const row = document.createElement("div"); row.className = "pl";
+    const dot = document.createElement("span"); dot.className = "dot";
+    dot.style.background = TEAM_COLOR[team] || "#888";
+    const nm = document.createElement("span"); nm.style.flex = "1";
+    nm.textContent = p.name + (p.id === myId ? " (you)" : "") + (p.id === 0 ? " ⭐" : "");
+    const tm = document.createElement("span"); tm.className = "small"; tm.textContent = TEAM_NAME[team];
+    row.append(dot, nm, tm); list.append(row);
+  }
+  $("lenSel").value = String(matchLen);
+}
+
+function openInvite() {
+  $("roomCode").textContent = roomCode;
+  $("linkBox").textContent = gameLink();
+  show("btnShare", !!navigator.share);
+  show("invite");
+}
+$("btnInvite").onclick = openInvite;
+$("btnInviteClose").onclick = () => show("invite", false);
+$("btnCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(gameLink()); toast("Link copied"); }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($("linkBox"));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    try { document.execCommand("copy"); toast("Link copied"); } catch (e2) { toast("Press and hold the link to copy it"); }
+  }
+};
+$("btnShare").onclick = () => {
+  navigator.share({ title: "Jom Bola", text: "Come play football with me! Code " + roomCode, url: gameLink() }).catch(() => {});
+};
+
+let endShown = false;
+function updateHud() {
+  $("scR").textContent = view.score[0];
+  $("scB").textContent = view.score[1];
+  $("clock").textContent = view.phase === "warm" ? "—:—" : fmtTime(view.timeLeft);
+  const isEnd = view.phase === "end";
+  if (isEnd && !endShown) {
+    const [r, b] = view.score;
+    $("endScore").innerHTML = '<span style="color:var(--red)">' + r + '</span> – <span style="color:var(--blue)">' + b + "</span>";
+    $("endWin").textContent = r > b ? "Red wins! 🏆" : b > r ? "Blue wins! 🏆" : "It's a draw!";
+    show("btnAgain", role === "host"); show("endWait", role !== "host");
+    show("end");
+  }
+  if (!isEnd && endShown) show("end", false);
+  endShown = isEnd;
+}
+
+// =====================================================================
+//  Input: keyboard, and touch (left = joystick, right = kick)
+// =====================================================================
+const keys = new Set();
+let isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
+  keys.add(e.code);
+  if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+});
+addEventListener("keyup", (e) => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+
+const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };  // screen px
+const kickTouch = { id: null };
+const STICK_R = 55;
+const canvas = $("game");
+canvas.addEventListener("pointerdown", (e) => {
+  if (e.pointerType !== "mouse") isTouch = true;
+  if (e.pointerType === "mouse") return;
+  initAudio();
+  if (e.clientX < W / 2 && stick.id === null) {
+    Object.assign(stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY });
+  } else if (e.clientX >= W / 2 && kickTouch.id === null) {
+    kickTouch.id = e.pointerId;
+  }
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (e.pointerId === stick.id) { stick.x = e.clientX; stick.y = e.clientY; }
+});
+const endPointer = (e) => {
+  if (e.pointerId === stick.id) stick.id = null;
+  if (e.pointerId === kickTouch.id) kickTouch.id = null;
+};
+canvas.addEventListener("pointerup", endPointer);
+canvas.addEventListener("pointercancel", endPointer);
+
+// Direction in screen space -> world space (field is turned on its side in portrait)
+function screenToWorldDir(sx, sy) { return portrait ? { x: -sy, y: sx } : { x: sx, y: sy }; }
+
+function readInput() {
+  if (myTeam() === "s" || document.querySelector(".overlay:not(.hidden):not(#end)")) return { x: 0, y: 0, k: false };
+  let sx = 0, sy = 0;
+  if (keys.has("ArrowLeft") || keys.has("KeyA")) sx -= 1;
+  if (keys.has("ArrowRight") || keys.has("KeyD")) sx += 1;
+  if (keys.has("ArrowUp") || keys.has("KeyW")) sy -= 1;
+  if (keys.has("ArrowDown") || keys.has("KeyS")) sy += 1;
+  if (stick.id !== null) {
+    const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy);
+    if (d > 6) { const m = Math.min(1, d / STICK_R); sx = (dx / d) * m; sy = (dy / d) * m; }
+  }
+  const len = Math.hypot(sx, sy);
+  if (len > 1) { sx /= len; sy /= len; }
+  const w = screenToWorldDir(sx, sy);
+  const k = keys.has("Space") || keys.has("KeyX") || keys.has("KeyK") || kickTouch.id !== null;
+  return { x: w.x, y: w.y, k };
+}
+
+// =====================================================================
+//  Drawing
+// =====================================================================
+const ctx = canvas.getContext("2d");
+let W = 0, H = 0, portrait = false, scale = 1, cx = 0, cy = 0;
+const VIEW_W = FW + 2 * (GOAL_D + 25), VIEW_H = FH + 2 * 45;
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  const dpr = devicePixelRatio || 1;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  portrait = H > W * 1.1;
+  const hud = 56;
+  if (portrait) {
+    const reserve = isTouch ? 150 : 0;               // room for thumbs below the pitch
+    scale = Math.min(W / VIEW_H, (H - hud - reserve) / VIEW_W);
+    cx = W / 2; cy = hud + (VIEW_W * scale) / 2 + 4;
+  } else {
+    scale = Math.min(W / VIEW_W, (H - hud) / VIEW_H);
+    cx = W / 2; cy = hud + (H - hud) / 2;
+  }
+}
+addEventListener("resize", resize);
+resize();
+
+function worldTransform() {
+  ctx.translate(cx, cy);
+  if (portrait) ctx.rotate(-Math.PI / 2);
+  ctx.scale(scale, scale);
+  ctx.translate(-FW / 2, -FH / 2);
+}
+// Draw text upright at a world point
+// dy moves it down the screen (not down the pitch), so names stay under players
+function uprightText(txt, x, y, size, color, outline = true, dy = 0) {
+  ctx.save(); ctx.translate(x, y);
+  if (portrait) ctx.rotate(Math.PI / 2);
+  ctx.translate(0, dy);
+  ctx.font = "700 " + size + "px -apple-system, system-ui, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (outline) { ctx.lineJoin = "round"; ctx.lineWidth = size / 4; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.strokeText(txt, 0, 0); }
+  ctx.fillStyle = color; ctx.fillText(txt, 0, 0);
+  ctx.restore();
+}
+
+function drawPitch() {
+  // Grass beyond the lines
+  ctx.fillStyle = "#2a7a3b";
+  ctx.fillRect(-GOAL_D - 25, -45, FW + 2 * (GOAL_D + 25), FH + 90);
+  // Stripes
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = i % 2 ? "#2f8a42" : "#33934a";
+    ctx.fillRect(i * FW / 10, 0, FW / 10, FH);
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, FW, FH);
+  ctx.beginPath(); ctx.moveTo(FW / 2, 0); ctx.lineTo(FW / 2, FH); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FW / 2, FH / 2, 80, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(FW / 2, FH / 2, 4, 0, Math.PI * 2); ctx.fill();
+  // Penalty boxes
+  ctx.strokeRect(0, FH / 2 - 160, 140, 320);
+  ctx.strokeRect(FW - 140, FH / 2 - 160, 140, 320);
+  ctx.beginPath(); ctx.arc(140, FH / 2, 60, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FW - 140, FH / 2, 60, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
+  // Goals with nets
+  for (const side of [0, 1]) {
+    const x0 = side === 0 ? -GOAL_D : FW, y0 = FH / 2 - GOAL_H / 2;
+    ctx.fillStyle = side === 0 ? "rgba(230,57,70,0.25)" : "rgba(58,134,255,0.25)";
+    ctx.fillRect(x0, y0, GOAL_D, GOAL_H);
+    ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 8; x < GOAL_D; x += 9) { ctx.moveTo(x0 + x, y0); ctx.lineTo(x0 + x, y0 + GOAL_H); }
+    for (let y = 9; y < GOAL_H; y += 9) { ctx.moveTo(x0, y0 + y); ctx.lineTo(x0 + GOAL_D, y0 + y); }
+    ctx.stroke();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
+    ctx.beginPath();
+    const lx = side === 0 ? 0 : FW, bx = side === 0 ? -GOAL_D : FW + GOAL_D;
+    ctx.moveTo(lx, y0); ctx.lineTo(bx, y0); ctx.lineTo(bx, y0 + GOAL_H); ctx.lineTo(lx, y0 + GOAL_H);
+    ctx.stroke();
+  }
+  for (const p of POSTS) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x, p.y, POST_R, 0, Math.PI * 2); ctx.fill(); }
+}
+
+function drawPlayers() {
+  for (const p of view.players) {
+    // shadow
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 4, PR, PR * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+    if (p.id === myId) {
+      ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(p.x, p.y, PR + 7, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.fillStyle = TEAM_COLOR[p.team] || "#888";
+    ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = p.k ? "#fff" : "rgba(0,0,0,0.5)"; ctx.lineWidth = p.k ? 4 : 2;
+    ctx.stroke();
+    uprightText(p.name, p.x, p.y, 14, "#fff", true, PR + 13);
+  }
+}
+
+function drawBall() {
+  const b = view.ball;
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.beginPath(); ctx.ellipse(b.x + 3, b.y + 4, BR, BR * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.strokeStyle = "#111"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(b.x, b.y, BR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#111";
+  ctx.beginPath(); ctx.arc(b.x, b.y, BR * 0.35, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawBanner() {
+  let big = "", small = "", small2 = "";
+  if (role === "client" && snaps.length && performance.now() - lastSnapAt > 3000) {
+    uprightText("Waiting for the host…", FW / 2, FH / 2, 30, "#ffd23f");
+    uprightText("Their game may be paused. Ask them to open it again.", FW / 2, FH / 2, 18, "#fff", true, 40);
+    return;
+  }
+  if (view.phase === "goal") { big = "GOAL!"; small = view.scorer; }
+  else if (view.phase === "kickoff") { big = String(Math.max(1, Math.ceil(view.phaseT))); small = "Get ready"; }
+  else if (view.phase === "warm") {
+    small = "Warm-up";
+    small2 = (role === "host" && roster.length < 2) ? "Tap 🔗 Invite to add friends" : "The match starts when both teams have a player";
+  }
+  if (big) {
+    uprightText(big, FW / 2, FH / 2, 90, "#ffd23f", true, -10);
+    if (small) uprightText(small, FW / 2, FH / 2, 30, "#fff", true, 60);
+  } else if (small) {
+    uprightText(small, FW / 2, FH / 2, 30, "#ffd23f", true, -125);
+    uprightText(small2, FW / 2, FH / 2, 20, "#fff", true, -98);
+  }
+}
+
+function drawControls() {
+  if (!isTouch || myTeam() === "s") return;
+  ctx.save();
+  // joystick
+  const jx = stick.id !== null ? stick.ox : 90, jy = stick.id !== null ? stick.oy : H - 100;
+  ctx.globalAlpha = stick.id !== null ? 0.5 : 0.25;
+  ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(jx, jy, STICK_R, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+  let kx = jx, ky = jy;
+  if (stick.id !== null) {
+    const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy), m = Math.min(d, STICK_R);
+    if (d > 0) { kx = jx + (dx / d) * m; ky = jy + (dy / d) * m; }
+  }
+  ctx.globalAlpha = 0.7; ctx.fillStyle = "#fff";
+  ctx.beginPath(); ctx.arc(kx, ky, 24, 0, Math.PI * 2); ctx.fill();
+  // kick button
+  const bx = W - 90, by = H - 100;
+  ctx.globalAlpha = kickTouch.id !== null ? 0.85 : 0.45;
+  ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.arc(bx, by, 48, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1; ctx.fillStyle = "#222"; ctx.font = "800 17px system-ui, sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("KICK", bx, by);
+  ctx.restore();
+}
+
+function frame() {
+  if (role === "host") hostView();
+  else if (role === "client") clientView();
+
+  ctx.setTransform(devicePixelRatio || 1, 0, 0, devicePixelRatio || 1, 0, 0);
+  ctx.fillStyle = "#164d24"; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  worldTransform();
+  drawPitch();
+  if (role) { drawPlayers(); drawBall(); drawBanner(); }
+  ctx.restore();
+  if (role) { drawControls(); updateHud(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
