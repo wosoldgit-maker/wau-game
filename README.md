@@ -109,9 +109,12 @@ A football game in `bola/index.html` for 2 to 6 people, each on their own phone 
   - **SHOOT** (hold Space or K): hold to fill the power bar, let go to shoot. Point roughly at the goal and the shot is aimed at the corner you lean towards. Full power can fly wide.
   - Without the ball, the buttons change: **TACKLE** (J) is a slide tackle along the grass at the ball (miss it and you need a moment to get back up), and **SWITCH** (Space) takes control of the teammate nearest the ball.
   - When a computer teammate wins the ball, you take control of them automatically.
-- The game runs slowly, at a quarter of full speed, so it is easy to control on a phone. To change it, edit `PACE` near the top of the code (1 = full speed, 0.25 = a quarter).
+- The game runs at 55% of full speed so it is easy to control on a phone. To change it, edit `PACE` near the top of the code (1 = full speed, 0.55 = 55%).
 - The ball stays at your feet while you dribble and leaves from the kicking foot. Players swing their leg back while you charge a shot and through the ball when they kick. Keepers dive with their arms out, and an opponent who gets close can poke the ball away.
 - Hold the phone upright or sideways. Upright, the pitch turns so Red attacks up the screen.
+- The camera zooms in and follows the ball, with a mini-map of the whole pitch in the corner and an arrow at the screen edge if your player is out of view.
+- The pitch sits in a stadium with a crowd and advertising boards (for the other games on this site). The crowd murmurs, gets louder on shots and roars for goals. A goal gets a banner in the scoring team's colours, confetti and a camera shake.
+- The ball spins as it rolls and leaves a trail on hard shots, and kicks and slides throw up grass.
 - Computer players only run on the host's phone, so they don't add lag for anyone.
 - The host can set the match length (2, 3, 5 or 10 minutes) and restart the match from the **☰** menu.
 
