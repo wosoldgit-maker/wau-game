@@ -89,3 +89,25 @@ A study game in `cbop/index.html` for BNM's policy document *External Sector Sta
 For study only. The policy document is the authority.
 
 Play it at `/cbop/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/cbop/
+
+---
+
+# Jom Bola
+
+A football game in `bola/index.html` for 2 to 10 people, each on their own phone or computer. Anyone who has the link can play.
+
+- Press **Create game**. You get a link and a 5-letter code. Send the link with **Copy link** or **Share…**.
+- Friends open the link, type a name and press **Join game**. They can also type the code on the start screen.
+- Players are put into Red and Blue teams in turn (up to 5 a side; anyone after that watches). Change team from the **☰** menu.
+- The match starts on its own once each team has at least one player. Before that it is warm-up and goals don't count.
+- Controls: on a phone, drag on the left side of the screen to run and hold the right side to kick. On a computer, use the arrow keys or WASD to run and Space or X to kick. A kick only happens when you are touching the ball.
+- Hold the phone upright or sideways. Upright, the pitch turns so Red attacks up the screen.
+- The host can set the match length (2, 3, 5 or 10 minutes) and restart the match from the **☰** menu.
+
+How it works: there is no game server. The host's browser runs the match and sends it straight to each player's browser over WebRTC. The free PeerJS server only helps the browsers find each other. `bola/peerjs.min.js` is a copy of PeerJS 1.5.4, so the game doesn't depend on a CDN. This means:
+
+- **The host must keep the game open on screen.** If the host closes the tab or switches to another app, the game stops or ends for everyone.
+- Players who don't send anything for 6 seconds (for example, their phone locked) are removed. They can open the link again to rejoin.
+- Some strict school or office networks block WebRTC, and then a player can't join.
+
+Play it at `/bola/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/bola/
