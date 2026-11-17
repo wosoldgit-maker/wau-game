@@ -112,6 +112,9 @@ A football game in `bola/index.html` for 2 to 6 people, each on their own phone 
 - The game runs at 55% of full speed so it is easy to control on a phone. To change it, edit `PACE` near the top of the code (1 = full speed, 0.55 = 55%).
 - The ball stays at your feet while you dribble and leaves from the kicking foot. Players swing their leg back while you charge a shot and through the ball when they kick. Keepers dive with their arms out, and an opponent who gets close can poke the ball away.
 - Hold the phone upright or sideways. Upright, the pitch turns so Red attacks up the screen.
+- It is always clear who is who: whoever has the ball stands on a glowing disc in their team colour, and a label under the score says who has it ("⚽ You", a friend's name, or "Red #9"). People-controlled players have a bobbing arrow with their name above their head (yellow for you), and a ring bursts out when you switch player.
+- While you hold PASS, a dashed line and a ring show which teammate the pass will reach. While you hold SHOOT, a dashed line and a crosshair show where the shot is aimed.
+- When you join someone else's game, your own player answers your thumb straight away on your phone instead of waiting for the host's phone, and is gently kept in line with the host.
 - The camera zooms in and follows the ball, with a mini-map of the whole pitch in the corner and an arrow at the screen edge if your player is out of view.
 - The pitch sits in a stadium with a crowd and advertising boards (for the other games on this site). The crowd murmurs, gets louder on shots and roars for goals. A goal gets a banner in the scoring team's colours, confetti and a camera shake.
 - The ball spins as it rolls and leaves a trail on hard shots, and kicks and slides throw up grass.
