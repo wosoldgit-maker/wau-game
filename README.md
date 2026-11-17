@@ -94,37 +94,31 @@ Play it at `/cbop/` on the same site, for example https://wosoldgit-maker.github
 
 # Jom Bola
 
-A football game in `bola/index.html` for 2 to 6 people, each on their own phone or computer. Anyone who has the link can play.
+A 3D football game in `bola/` for playing with friends over a link, in the style of a TV football match. Up to 11 people a side; computer players fill every empty place.
 
-- Press **Create game**. You get a link and a 5-letter code. Send the link with **Copy link** or **Share…**.
-- Friends open the link, type a name and press **Join game**. They can also type the code on the start screen.
-- Players are put into Red and Blue teams in turn (up to 3 a side; anyone after that watches). Change team from the **☰** menu.
-- It is always 3 against 3 on a small pitch. Computer players fill every empty place: a goalkeeper, a defender and a striker. When a friend joins, they take a computer player's place. With only two people it is still 3v3, each with 2 computer teammates. The host can turn computer players off in the **☰** menu.
-- The match starts straight away. With computer players off, it waits until each team has at least one person, and goals don't count during the warm-up.
-- Players are drawn from above as footballers in kit, with head, arms, legs and boots. They run with a stride, face where they are going and swing a leg when they kick. Keepers wear green (Red) or orange (Blue). People have their name under them and a yellow ring for you; computer players show their shirt number.
-- After a goal, the team that let it in kicks off. The goal is credited to the player who shot it, or shown as an own goal.
-- Controls work like a console football game:
-  - **Run**: drag anywhere on the left half of the screen (arrow keys or WASD on a computer). The two buttons, the same size, sit in the bottom-right corner for your right thumb. They change depending on whether you have the ball.
-  - **PASS** (hold J or X): hold to fill the blue power bar, then let go. A short hold passes to a nearby teammate, a long hold to one further away, in the direction you are pointing. If that teammate is a computer player, you take control of them so you can carry on the move, and they step across to meet the ball.
-  - **SHOOT** (hold Space or K): hold to fill the power bar, let go to shoot. Point roughly at the goal and the shot is aimed at the corner you lean towards. Full power can fly wide.
-  - Without the ball, the buttons change: **TACKLE** (J) is a slide tackle along the grass at the ball (miss it and you need a moment to get back up), and **SWITCH** (Space) takes control of the teammate nearest the ball.
-  - When a computer teammate wins the ball, you take control of them automatically.
-- The game runs at 55% of full speed so it is easy to control on a phone. To change it, edit `PACE` near the top of the code (1 = full speed, 0.55 = 55%).
-- The ball stays at your feet while you dribble and leaves from the kicking foot. Players swing their leg back while you charge a shot and through the ball when they kick. Keepers dive with their arms out, and an opponent who gets close can poke the ball away.
-- Hold the phone upright or sideways. Upright, the pitch turns so Red attacks up the screen.
-- It is always clear who is who: whoever has the ball stands on a glowing disc in their team colour, and a label under the score says who has it ("⚽ You", a friend's name, or "Red #9"). People-controlled players have a bobbing arrow with their name above their head (yellow for you), and a ring bursts out when you switch player.
-- While you hold PASS, a dashed line and a ring show which teammate the pass will reach. While you hold SHOOT, a dashed line and a crosshair show where the shot is aimed.
-- When you join someone else's game, your own player answers your thumb straight away on your phone instead of waiting for the host's phone, and is gently kept in line with the host.
-- The camera zooms in and follows the ball, with a mini-map of the whole pitch in the corner and an arrow at the screen edge if your player is out of view.
-- The pitch sits in a stadium with a crowd and advertising boards (for the other games on this site). The crowd murmurs, gets louder on shots and roars for goals. A goal gets a banner in the scoring team's colours, confetti and a camera shake.
-- The ball spins as it rolls and leaves a trail on hard shots, and kicks and slides throw up grass.
-- Computer players only run on the host's phone, so they don't add lag for anyone.
-- The host can set the match length (2, 3, 5 or 10 minutes) and restart the match from the **☰** menu.
+**Play:** press **Create game**, then send the link (or the 5-letter code) with **🔗 Invite**. Friends open the link and press **Join game**. Hold the phone sideways: the match is played in landscape.
 
-How it works: there is no game server. The host's browser runs the match and sends it straight to each player's browser over WebRTC. The free PeerJS server only helps the browsers find each other. `bola/peerjs.min.js` is a copy of PeerJS 1.5.4, so the game doesn't depend on a CDN. This means:
+**The match**
+- 11 v 11 by default, on a full-size pitch with real formations (4-3-3). The host can switch to 7 or 5 a side and choose the match length (3, 5, 8 or 12 minutes) from the **☰** menu.
+- Two halves, and the teams swap ends at half time. The clock counts 0' to 90'.
+- Throw-ins, corners and goal kicks when the ball goes out; free kicks for a slide tackle that takes the player instead of the ball.
+- The ball goes into the air: long passes are lofted, wingers cross, players head the ball, and shots rise. Hit one too hard and it can fly over the bar, or clip the post or bar.
+- Keepers dive, catch and parry; a parried shot can give away a corner.
 
-- **The host must keep the game open on screen.** If the host closes the tab or switches to another app, the game stops or ends for everyone.
-- Players who don't send anything for 6 seconds (for example, their phone locked) are removed. They can open the link again to rejoin.
+**Controls** (joystick on the left, buttons on the right)
+- With the ball: **PASS** (tap = short pass, hold = longer; long ones are lofted), **SHOOT** (hold for power), **SPRINT**.
+- Without the ball: **TACKLE** (close = standing tackle, a few metres away = slide), **SWITCH** to the player nearest the ball, **SPRINT**.
+- Keyboard: arrows or WASD to move, Shift to sprint, J pass / tackle, K or Space shoot / switch.
+- While you hold PASS, a ring and dashed line show who will get the ball; while you hold SHOOT, a line shows where it is aimed. Passing to a teammate gives you control of them. When a computer teammate wins the ball, you take control of them.
+
+**On screen:** the player you control has a yellow ring and a marker with your name; friends' players show their names. The ball carrier has a ring in their team colour. A radar at the bottom shows every player, and the scoreboard at the top left shows the score and minute.
+
+**Look and sound:** the TV camera sits high in the stand and follows the ball. The stadium has floodlights, a crowd, advertising boards for the other games on this site, and goals with nets. Players run, kick, slide, dive and head the ball. The crowd murmurs, swells on chances and roars for goals; the referee blows for kick-offs, restarts, half time and full time.
+
+**How it works:** there is no game server. The host's browser runs the match and sends it to everyone over WebRTC (PeerJS; the PeerJS server only helps browsers find each other). Players who join see their own player move instantly and are kept in line with the host. The 3D is drawn with three.js. Both libraries are copied into `bola/` (`three.min.js`, `peerjs.min.js`) so the game doesn't depend on a CDN. The code is in `bola/game.js`.
+
+- **The host must keep the game open on screen.** If the host closes it or switches apps, the game stops for everyone.
+- Players who don't send anything for 6 seconds (for example, a locked phone) are removed and can open the link again to rejoin.
 - Some strict school or office networks block WebRTC, and then a player can't join.
 
 Play it at `/bola/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/bola/
