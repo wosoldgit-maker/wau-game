@@ -105,17 +105,18 @@ A 3D football game in `bola/` for playing with friends over a link, in the style
 - The ball goes into the air: long passes are lofted, wingers cross, players head the ball, and shots rise. Hit one too hard and it can fly over the bar, or clip the post or bar.
 - Keepers dive, catch and parry; a parried shot can give away a corner.
 
-**Controls** (joystick on the left, buttons on the right)
-- With the ball: **PASS** (tap = short pass, hold = longer; long ones are lofted), **SHOOT** (hold for power), **SPRINT**.
-- Without the ball: **TACKLE** (close = standing tackle, a few metres away = slide), **SWITCH** to the player nearest the ball, **SPRINT**.
-- Keyboard: arrows or WASD to move, Shift to sprint, J pass / tackle, K or Space shoot / switch.
-- While you hold PASS, a ring and dashed line show who will get the ball; while you hold SHOOT, a line shows where it is aimed. Passing to a teammate gives you control of them. When a computer teammate wins the ball, you take control of them.
+**Controls** (laid out like football games on a phone: joystick on the left, four buttons in an arc on the right; the buttons change between attacking and defending)
+- Attacking: **SHOOT** (the big button; hold for power), **PASS** (tap: the strength is chosen for you, long ones are lofted over players), **THROUGH** (tap: plays the ball into the space in front of a teammate running forward), **SPRINT** (hold).
+- Defending: **TACKLE** (the big button; close = standing tackle, a few metres away = slide), **SWITCH** to the player nearest the ball, **PRESS** (hold: your player chases the ball carrier), **SPRINT**.
+- The joystick appears wherever you put your left thumb.
+- Keyboard: arrows or WASD to move, Shift to sprint; K or Space shoot / tackle, J pass / switch, L through ball / press.
+- While you hold SHOOT, a power bar and a line show where it is aimed. Passing to a teammate gives you control of them. When a computer teammate wins the ball, you take control of them.
 
 **On screen:** the player you control has a yellow ring and a marker with your name; friends' players show their names. The ball carrier has a ring in their team colour. A radar at the bottom shows every player, and the scoreboard at the top left shows the score and minute.
 
 **Look and sound:** the TV camera sits high in the stand and follows the ball. The stadium has floodlights, a crowd, advertising boards for the other games on this site, and goals with nets. Players run, kick, slide, dive and head the ball. The crowd murmurs, swells on chances and roars for goals; the referee blows for kick-offs, restarts, half time and full time.
 
-**How it works:** there is no game server. The host's browser runs the match and sends it to everyone over WebRTC (PeerJS; the PeerJS server only helps browsers find each other). Players who join see their own player move instantly and are kept in line with the host. The 3D is drawn with three.js. Both libraries are copied into `bola/` (`three.min.js`, `peerjs.min.js`) so the game doesn't depend on a CDN. The code is in `bola/game.js`.
+**How it works:** there is no game server. The host's browser runs the match and sends it to everyone over WebRTC (PeerJS; the PeerJS server only helps browsers find each other). Players who join see their own player move instantly and are kept in line with the host. The 3D is drawn with three.js; each player is only a few merged meshes, and the game lowers its own resolution if a phone can't keep up. Both libraries are copied into `bola/` (`three.min.js`, `peerjs.min.js`) so the game doesn't depend on a CDN. The code is in `bola/game.js`.
 
 - **The host must keep the game open on screen.** If the host closes it or switches apps, the game stops for everyone.
 - Players who don't send anything for 6 seconds (for example, a locked phone) are removed and can open the link again to rejoin.

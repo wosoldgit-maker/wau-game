@@ -183,8 +183,8 @@ function showError(title, msg) {
 function enterGame() {
   show("start", false); show("hud");
   $("helpTxt").innerHTML = isTouch
-    ? "Left thumb: move.<br><b>With the ball</b> PASS (short tap = short pass, hold = longer / lofted), SHOOT (hold for power), SPRINT.<br><b>Without the ball</b> TACKLE (close = standing tackle, further = slide), SWITCH player, SPRINT."
-    : "Arrows / WASD: move. Shift: sprint.<br><b>With the ball</b> J pass (hold = longer / lofted), K shoot (hold for power).<br><b>Without the ball</b> J tackle, K switch player.";
+    ? "Left thumb: move (the stick appears where you touch).<br><b>Attacking</b> SHOOT (hold for power) · PASS · THROUGH ball · SPRINT.<br><b>Defending</b> TACKLE (close = standing, a few metres = slide) · SWITCH player · PRESS (hold to chase the ball) · SPRINT."
+    : "Arrows / WASD: move. Shift: sprint.<br><b>Attacking</b> K or Space shoot (hold for power) · J pass · L through ball.<br><b>Defending</b> K tackle · J switch player · L hold to press.";
 }
 
 // =====================================================================
@@ -222,7 +222,7 @@ function onClientConnection(conn) {
     } else if (pid !== null) {
       const p = sim.players.get(pid);
       if (!p) return;
-      if (m.t === "i") p.in = { x: clamp(+m.x || 0, -1, 1), y: clamp(+m.y || 0, -1, 1), s: !!m.s, p: !!m.p, r: !!m.r, sc: m.sc | 0, pc: m.pc | 0, wc: m.wc | 0 };
+      if (m.t === "i") p.in = { x: clamp(+m.x || 0, -1, 1), y: clamp(+m.y || 0, -1, 1), s: !!m.s, p: !!m.p, t: !!m.t2, r: !!m.r, sc: m.sc | 0, pc: m.pc | 0, tc: m.tc | 0, wc: m.wc | 0 };
       else if (m.t === "tm") setTeam(p, m.v);
       else if (m.t === "pg") sendTo(conn, { t: "po", c: m.c });
     }
@@ -255,7 +255,7 @@ function addPlayer(id, name, conn) {
   const r = peopleOn("r").length, b = peopleOn("b").length;
   const team = r + b < teamSize * 2 ? (r <= b ? "r" : "b") : "s";
   sim.players.set(id, { id, name, team, conn, seen: performance.now(),
-    in: { x: 0, y: 0, s: false, p: false, r: false, sc: 0, pc: 0, wc: 0 }, lastP: 0, lastS: 0, lastW: 0, shootMode: null, passMode: null });
+    in: { x: 0, y: 0, s: false, p: false, t: false, r: false, sc: 0, pc: 0, tc: 0, wc: 0 }, lastP: 0, lastS: 0, lastT: 0, lastW: 0, shootMode: null, passMode: null });
   afterRosterChange();
 }
 function setTeam(p, t) {
@@ -280,7 +280,7 @@ function arrangeTeams() {
   for (const t of ["r", "b"]) {
     const people = peopleOn(t), ids = new Set(people.map((p) => p.id));
     let mine = sim.bodies.filter((b) => b.team === t);
-    for (const b of mine) if (b.ctrl !== null && !ids.has(b.ctrl)) { b.ctrl = null; b.charging = false; b.queued = null; }
+    for (const b of mine) if (b.ctrl !== null && !ids.has(b.ctrl)) { b.ctrl = null; b.charging = false; b.queued = null; b.pressing = false; }
     const want = botsOn ? SLOTS.length : people.length;
     const prefOf = (b) => PERSON_PREF.indexOf(roleOf(b)) * 20 + (SLOTS.length - b.slot);
     while (mine.length > want) {
@@ -417,7 +417,7 @@ function switchPlayer(person, to = null) {
     to = best;
   }
   if (!to || to.ctrl !== null) return;
-  if (cur) { cur.ctrl = null; cur.charging = false; cur.charge = 0; cur.queued = null; }
+  if (cur) { cur.ctrl = null; cur.charging = false; cur.charge = 0; cur.queued = null; cur.pressing = false; }
   to.ctrl = person.id; to.queued = null; to.charging = false;
   if (person.shootMode !== "switched") person.shootMode = null;
   person.passMode = null;
@@ -440,7 +440,7 @@ function kickDir(b, q) {
 function pickPassTarget(b, dx, dy, power) {
   const ball = sim.ball;
   let best = null, bs = 1e9;
-  const want = 6 + Math.pow(power ?? 0.4, 1.3) * 42;
+  const want = power === undefined ? null : 6 + Math.pow(power, 1.3) * 42;
   for (const m of sim.bodies) {
     if (m.team !== b.team || m === b) continue;
     const lead = 0.7;
@@ -448,11 +448,14 @@ function pickPassTarget(b, dx, dy, power) {
     if (md < 3 || md > 60) continue;
     const ang = Math.acos(clamp((mx * dx + my * dy) / md, -1, 1));
     if (ang > 0.6) continue;
-    const score = ang * 30 + Math.abs(md - want) * 0.6;
+    const open = Math.min(nearestOpp(m, sim.bodies, m.x, m.y).d, 6);
+    const score = ang * 30 + (want === null ? md * 0.3 - open * 0.8 : Math.abs(md - want) * 0.6);
     if (score < bs) { bs = score; best = { m, mx, my, md }; }
   }
   return best;
 }
+// A lofted ball that lands d metres away, high enough (about 3 m) to clear players in between
+function loft(d) { const T = clamp(d / 22 + 0.6, 1.45, 1.9); return { vh: d / T * 1.03, vz: GRAV * T / 2 }; }
 // Speed for a rolling ball to cover d metres and still be moving at vEnd
 function rollSpeed(d, vEnd = 4) {
   const F = (v) => v / 0.35 - (1.6 / (0.35 * 0.35)) * Math.log(1.6 + 0.35 * v);
@@ -476,19 +479,44 @@ function doKick(b, q) {
   const isGK = roleOf(b) === "GK";
   if (q.type === "pass") {
     const best = pickPassTarget(b, dx, dy, q.power);
-    const lofted = q.lob || (best ? best.md > 26 : q.power > 0.75) || (isGK && (!best || best.md > 18));
+    const blocked = best && !laneClear(sim.bodies, b.team, ball.x, ball.y, ball.x + best.mx, ball.y + best.my, 0.9);
+    const lofted = q.lob || (best ? best.md > 30 || (blocked && best.md > 12) : (q.power ?? 0.4) > 0.75) || (isGK && (!best || best.md > 18));
     if (best) {
       passTo = best.m;
       dx = best.mx / best.md; dy = best.my / best.md;
-      if (lofted) {
-        const vh = clamp(best.md / 1.25, 12, 26), T = best.md / vh;
-        speed = vh; vz = GRAV * T / 2 * 0.92;
-      } else speed = clamp(rollSpeed(best.md, 3.5 + (q.power ?? 0.4) * 3), 6, 30);
+      if (lofted) { const L = loft(best.md); speed = L.vh; vz = L.vz; }
+      else speed = clamp(rollSpeed(best.md, q.auto ? 5 : 3.5 + (q.power ?? 0.4) * 3), 6, 30);
     } else {
       const d = 6 + (q.power ?? 0.4) * 38;
-      if (lofted) { const vh = clamp(d / 1.25, 12, 26); speed = vh; vz = GRAV * (d / vh) / 2 * 0.92; }
+      if (lofted) { const L = loft(d); speed = L.vh; vz = L.vz; }
       else speed = rollSpeed(d, 2);
     }
+    sim.events.push(vz > 0 ? "l" : "k");
+  } else if (q.type === "through") {
+    // Into the space in front of a teammate who is going forward
+    const sd = side(b.team);
+    let best = null, bs = 1e9;
+    for (const m of sim.bodies) {
+      if (m.team !== b.team || m === b || roleOf(m) === "GK") continue;
+      const rx = m.x - ball.x, ry = m.y - ball.y, rd = hyp(rx, ry);
+      if (rd < 4 || rd > 50) continue;
+      const ang = Math.acos(clamp((rx * dx + ry * dy) / rd, -1, 1));
+      if (ang > 0.9) continue;
+      const score = ang * 25 - rx * sd * 0.3 + rd * 0.1;
+      if (score < bs) { bs = score; best = m; }
+    }
+    let tx, ty;
+    if (best) {
+      const v = hyp(best.vx, best.vy);
+      const run = v > 2 ? { x: best.vx / v, y: best.vy / v } : { x: sd, y: 0 };
+      const lead = 8;
+      tx = clamp(best.x + (run.x * 0.5 + sd * 0.5) * lead, 1, FW - 1); ty = clamp(best.y + run.y * 0.5 * lead, 1, FH - 1);
+      passTo = best;
+    } else { tx = ball.x + dx * 18; ty = ball.y + dy * 18; }
+    const d = hyp(tx - ball.x, ty - ball.y);
+    dx = (tx - ball.x) / d; dy = (ty - ball.y) / d;
+    if (laneClear(sim.bodies, b.team, ball.x, ball.y, tx, ty, 0.7) || d < 12) speed = clamp(rollSpeed(d, 3.5), 6, 28);
+    else { const L = loft(d); speed = L.vh; vz = L.vz; }
     sim.events.push(vz > 0 ? "l" : "k");
   } else {
     const gx = oppGoalX(b.team), td = hyp(gx - ball.x, FH / 2 - ball.y);
@@ -522,41 +550,44 @@ function doKick(b, q) {
 //  HOST: people's controls
 // =====================================================================
 function isOnBall(b) { return sim.owner === b || (!sim.owner && sim.ball.z < 1 && hyp(sim.ball.x - b.x, sim.ball.y - b.y) < 2.2); }
+// Buttons, like a console football game on a phone:
+//   with the ball:    SHOOT (hold for power)   PASS (tap)   THROUGH (tap)   SPRINT (hold)
+//   without the ball: TACKLE                   SWITCH       PRESS (hold)    SPRINT (hold)
 function handlePeople() {
   for (const person of sim.players.values()) {
     const inp = person.in;
-    const newPass = inp.pc !== person.lastP, newShoot = inp.sc !== person.lastS;
-    person.lastP = inp.pc; person.lastS = inp.sc;
+    const newPass = inp.pc !== person.lastP, newShoot = inp.sc !== person.lastS, newThru = inp.tc !== person.lastT;
+    person.lastP = inp.pc; person.lastS = inp.sc; person.lastT = inp.tc;
     if (person.team === "s") { person.lastW = inp.wc; continue; }
     if (inp.wc !== person.lastW) { person.lastW = inp.wc; switchPlayer(person); }
-    const b = bodyOf(person);
+    let b = bodyOf(person);
     if (!b) continue;
     b.ix = inp.x; b.iy = inp.y; b.sprint = inp.r;
     const down = b.tackleT > 0 || b.downT > 0 || b.standT > 0;
     const onBall = isOnBall(b);
 
-    // PASS (hold = more power, longer / lofted)  |  without the ball: TACKLE
-    if (newPass && person.passMode === null && !down) {
-      if (!onBall) {
-        const d = hyp(sim.ball.x - b.x, sim.ball.y - b.y);
-        if (d < 1.9) startStandTackle(b); else if (d < 6) startSlide(b);
-        person.passMode = "tackle";
-      } else if (b.charging !== "shot") person.passMode = "pass";
-    }
-    if (person.passMode === "pass") {
-      if (inp.p) { b.charging = "pass"; b.charge = Math.min(1, b.charge + STEP / 0.75); }
-      else { b.queued = { type: "pass", power: Math.max(0.1, b.charge), t: 0.45 }; b.charging = false; b.charge = 0; person.passMode = null; }
-    } else if (person.passMode === "tackle" && !inp.p) person.passMode = null;
-
-    // SHOOT (hold for power)  |  without the ball: SWITCH
+    // Big button: SHOOT (hold for power) | TACKLE
     if (newShoot && person.shootMode === null) {
-      if (!onBall) { switchPlayer(person); person.shootMode = "switched"; }
-      else if (!down && b.charging !== "pass") person.shootMode = "shoot";
+      if (onBall) { if (!down) person.shootMode = "shoot"; }
+      else if (!down) {
+        const d = hyp(sim.ball.x - b.x, sim.ball.y - b.y);
+        if (d < 1.9) startStandTackle(b); else if (d < 5.5) startSlide(b);
+        person.shootMode = "tackle";
+      }
     }
     if (person.shootMode === "shoot") {
       if (inp.s) { b.charging = "shot"; b.charge = Math.min(1, b.charge + STEP / 0.9); }
       else { b.queued = { type: "shot", power: Math.max(0.2, b.charge), t: 0.45 }; b.charging = false; b.charge = 0; person.shootMode = null; }
-    } else if (person.shootMode === "switched" && !inp.s) person.shootMode = null;
+    } else if (person.shootMode === "tackle" && !inp.s) person.shootMode = null;
+
+    // PASS (tap: strength is chosen for you) | SWITCH
+    if (newPass) {
+      if (onBall) { if (!down && b.charging !== "shot") b.queued = { type: "pass", auto: true, t: 0.45 }; }
+      else { switchPlayer(person); b = bodyOf(person) || b; }
+    }
+    // THROUGH ball into space (tap) | PRESS the ball carrier (hold)
+    if (newThru && onBall && !down && b.charging !== "shot") b.queued = { type: "through", t: 0.45 };
+    b.pressing = !onBall && inp.t && !down;
   }
 }
 function startSlide(b) {
@@ -625,13 +656,17 @@ function step() {
         if (tl2 > 0.3) { ix = tx / tl2 * Math.min(1, tl2 / 2); iy = ty / tl2 * Math.min(1, tl2 / 2); }
       }
     }
+    if (b.pressing) {
+      const tx = ball.x + ball.vx * 0.25 - b.x, ty = ball.y + ball.vy * 0.25 - b.y, tl = hyp(tx, ty);
+      if (tl > 0.9) { ix = tx / tl; iy = ty / tl; } else { ix = iy = 0; }
+    }
     const len = hyp(ix, iy);
     if (len > 1) { ix /= len; iy /= len; }
     let top = b.sprint ? 7.8 : 5.4;
     if (sim.owner === b) top *= 0.9;
     if (b.charging) top = 3.2;
     if (b.restartHold && sim.owner === b) top = 0;
-    const k = Math.min(1, (b.sprint ? 5.5 : 7) * dt);
+    const k = Math.min(1, (b.sprint ? 8 : 11) * dt);
     b.vx += (ix * top - b.vx) * k; b.vy += (iy * top - b.vy) * k;
     if (b.tackleT > 0) {
       b.tackleT -= dt;
@@ -644,7 +679,7 @@ function step() {
     b.x += b.vx * dt; b.y += b.vy * dt;
 
     // Turn towards where you're going
-    let want = null, rate = sim.owner === b ? 9 : 13;
+    let want = null, rate = sim.owner === b ? 11 : 15;
     if (b.tackleT > 0 || b.downT > 0) rate = 0;
     if (len > 0.25) want = Math.atan2(iy, ix);
     else if (hyp(b.vx, b.vy) > 0.8) want = Math.atan2(b.vy, b.vx);
@@ -1227,7 +1262,7 @@ let lastSent = "", lastSentAt = 0;
 setInterval(() => {
   if (role !== "client" || !hostConn || !hostConn.open) return;
   const inp = readInput();
-  const msg = { t: "i", x: +inp.x.toFixed(2), y: +inp.y.toFixed(2), s: inp.s ? 1 : 0, p: inp.p ? 1 : 0, r: inp.r ? 1 : 0, sc: inp.sc, pc: inp.pc, wc: inp.wc };
+  const msg = { t: "i", x: +inp.x.toFixed(2), y: +inp.y.toFixed(2), s: inp.s ? 1 : 0, p: inp.p ? 1 : 0, t2: inp.t ? 1 : 0, r: inp.r ? 1 : 0, sc: inp.sc, pc: inp.pc, tc: inp.tc, wc: inp.wc };
   const key = JSON.stringify(msg), now = performance.now();
   if (key !== lastSent || now - lastSentAt > 250) { hostConn.send(msg); lastSent = key; lastSentAt = now; }
 }, 1000 / 30);
@@ -1271,13 +1306,13 @@ function predictMe(last, frameDt) {
   let top = inp.r ? 7.8 : 5.4;
   if (view.ob === me.id) top *= 0.9;
   if (q[4] & 1) top = 3.2;
-  const k = Math.min(1, (inp.r ? 5.5 : 7) * frameDt);
+  const k = Math.min(1, (inp.r ? 8 : 11) * frameDt);
   pred.vx += (inp.x * top - pred.vx) * k; pred.vy += (inp.y * top - pred.vy) * k;
   pred.x += pred.vx * frameDt; pred.y += pred.vy * frameDt;
   const err = hyp(sx - pred.x, sy - pred.y);
   const pull = err > 3 ? 1 : Math.min(1, frameDt * 5);
   pred.x += (sx - pred.x) * pull; pred.y += (sy - pred.y) * pull;
-  if (hyp(inp.x, inp.y) > 0.25) pred.a += clamp(angDiff(pred.a, Math.atan2(inp.y, inp.x)), -13 * frameDt, 13 * frameDt);
+  if (hyp(inp.x, inp.y) > 0.25) pred.a += clamp(angDiff(pred.a, Math.atan2(inp.y, inp.x)), -15 * frameDt, 15 * frameDt);
   else pred.a += angDiff(pred.a, q[3]) * 0.2;
   me.x = pred.x; me.y = pred.y; me.a = pred.a;
   if (view.ob === me.id) view.ball = { x: me.x + Math.cos(me.a) * (PR + 0.2), y: me.y + Math.sin(me.a) * (PR + 0.2), z: 0 };
@@ -1297,8 +1332,11 @@ function hostView() {
 //  3D: renderer, stadium, players, ball, camera
 // =====================================================================
 const glCanvas = $("gl");
-const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const DPR = window.devicePixelRatio || 1;
+const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: DPR < 2, powerPreference: "high-performance" });
+// Resolution adapts to the phone: start at 1.5x and step down if frames are slow
+let gfxScale = Math.min(DPR, 1.5);
+renderer.setPixelRatio(gfxScale);
 renderer.outputEncoding = THREE.sRGBEncoding;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a1426);
@@ -1471,9 +1509,10 @@ const G = {
   hair: new THREE.SphereGeometry(0.133, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
   neck: new THREE.CylinderGeometry(0.06, 0.07, 0.1, 8),
 };
-function numberTex(n, team) {
+const numPlane = new THREE.PlaneGeometry(0.24, 0.24);
+function numberTex(n) {
   return canvasTex(64, 64, (g) => { g.font = "900 46px system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-    g.fillStyle = team === "r" ? "#fff" : "#fff"; g.lineWidth = 4; g.strokeStyle = "rgba(0,0,0,0.35)"; g.strokeText(String(n), 32, 35); g.fillText(String(n), 32, 35); });
+    g.fillStyle = "#fff"; g.lineWidth = 4; g.strokeStyle = "rgba(0,0,0,0.35)"; g.strokeText(String(n), 32, 35); g.fillText(String(n), 32, 35); });
 }
 function labelTex(text, color) {
   return canvasTex(256, 64, (g) => {
@@ -1484,39 +1523,59 @@ function labelTex(text, color) {
   });
 }
 const models = new Map();
+// Merge several coloured pieces into one mesh (fewer draw calls = smoother on phones)
+const playerMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+const _col = new THREE.Color();
+function merged(parts) {
+  const pos = [], nor = [], col = [];
+  for (const [geo, color] of parts) {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    const P = g.attributes.position.array, N = g.attributes.normal.array;
+    _col.setHex(color);
+    for (let i = 0; i < P.length; i += 3) { pos.push(P[i], P[i + 1], P[i + 2]); nor.push(N[i], N[i + 1], N[i + 2]); col.push(_col.r, _col.g, _col.b); }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+  out.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  return new THREE.Mesh(out, playerMat);
+}
+const SHARED = new Map();      // the same team+skin parts are shared between players
+function sharedPart(key, make) { if (!SHARED.has(key)) SHARED.set(key, make()); return SHARED.get(key).clone(); }
+const NUMTEX = new Map();
 function makeModel(p) {
   const isGK = SLOTS[p.slot] && SLOTS[p.slot][0] === "GK";
-  const kit = KIT[p.team + (isGK ? "GK" : "")];
+  const kitKey = p.team + (isGK ? "GK" : "");
+  const kit = KIT[kitKey];
   const k = Math.abs(p.id) * 7 + (p.team === "b" ? 3 : 0);
-  const skin = mat(SKIN[k % SKIN.length]), hair = mat(HAIR[(k >> 1) % HAIR.length]);
+  const skin = SKIN[k % SKIN.length], hair = HAIR[(k >> 1) % HAIR.length];
   const root = new THREE.Group(), tilt = new THREE.Group(), hips = new THREE.Group();
   root.add(tilt); tilt.add(hips); hips.position.y = 0.95;
-  const shorts = new THREE.Mesh(G.shorts, mat(kit.shorts)); hips.add(shorts);
+  hips.add(sharedPart("shorts" + kitKey, () => merged([[G.shorts, kit.shorts]])));
   const torso = new THREE.Group(); hips.add(torso);
-  torso.add(new THREE.Mesh(G.torso, mat(kit.shirt)));
-  const num = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshBasicMaterial({ map: numberTex(SLOTS[p.slot] ? SLOTS[p.slot][3] : "", p.team), transparent: true }));
+  torso.add(sharedPart("torso" + kitKey, () => merged([[G.torso, kit.shirt]])));
+  const n = SLOTS[p.slot] ? SLOTS[p.slot][3] : "";
+  if (!NUMTEX.has(n)) NUMTEX.set(n, new THREE.MeshBasicMaterial({ map: numberTex(n), transparent: true }));
+  const num = new THREE.Mesh(numPlane, NUMTEX.get(n));
   num.position.set(-0.125, 0.33, 0); num.rotation.y = -Math.PI / 2; torso.add(num);
-  const neck = new THREE.Mesh(G.neck, skin); neck.position.y = 0.6; torso.add(neck);
   const head = new THREE.Group(); head.position.y = 0.74; torso.add(head);
-  head.add(new THREE.Mesh(G.head, skin));
-  const hr = new THREE.Mesh(G.hair, hair); hr.rotation.z = 0.35; hr.position.x = -0.01; head.add(hr);
+  head.add(sharedPart("head" + skin + "_" + hair, () => merged([
+    [G.head, skin], [G.hair.clone().rotateZ(0.35).translate(-0.01, 0, 0), hair], [G.neck.clone().translate(0, -0.14, 0), skin]])));
   const legs = [], arms = [];
   for (const s of [-1, 1]) {
     const thigh = new THREE.Group(); thigh.position.set(0, -0.08, s * 0.11); hips.add(thigh);
-    thigh.add(new THREE.Mesh(G.thigh, skin));
+    thigh.add(sharedPart("thigh" + skin, () => merged([[G.thigh, skin]])));
     const knee = new THREE.Group(); knee.position.y = -0.44; thigh.add(knee);
-    knee.add(new THREE.Mesh(G.shin, mat(kit.socks)));
-    knee.add(new THREE.Mesh(G.boot, mat(0x151515)));
+    knee.add(sharedPart("shin" + kitKey, () => merged([[G.shin, kit.socks], [G.boot, 0x151515]])));
     legs.push({ thigh, knee });
     const sh = new THREE.Group(); sh.position.set(0, 0.52, s * 0.27); torso.add(sh);
-    sh.add(new THREE.Mesh(G.upper, mat(kit.shirt)));
-    sh.add(new THREE.Mesh(G.lower, isGK ? mat(0xf0f0f0) : skin));
+    sh.add(sharedPart("arm" + kitKey + skin, () => merged([[G.upper, kit.shirt], [G.lower, isGK ? 0xf0f0f0 : skin]])));
     arms.push(sh);
   }
   const shadow = new THREE.Mesh(flatPlane, shadowMat); shadow.scale.set(1.3, 1, 1.3); shadow.position.y = 0.02;
   const group = new THREE.Group(); group.add(root); group.add(shadow);
   scene.add(group);
-  return { group, root, tilt, hips, torso, head, legs, arms, ph: Math.random() * 6, lx: p.x, ly: p.y, sp: 0, team: p.team, slot: p.slot, label: null, labelText: "" };
+  return { group, root, tilt, hips, torso, head, legs, arms, ph: Math.random() * 6, lx: p.x, ly: p.y, sp: 0, team: p.team, slot: p.slot };
 }
 function animateModel(m, p, dt) {
   const moved = hyp(p.x - m.lx, p.y - m.ly);
@@ -1645,7 +1704,7 @@ function updateCamera(dt) {
   const b = view.ball;
   const aspect = glCanvas.clientWidth / Math.max(1, glCanvas.clientHeight);
   const portrait = aspect < 1;
-  const dist = FH * 0.38 + 5, height = FH * 0.26 + 4;
+  const dist = FH * 0.28 + 4, height = FH * 0.27 + 3;
   const halfView = Math.tan((camera.fov * Math.PI / 180) / 2) * hyp(dist, height) * aspect;
   const lim = Math.max(0, FW / 2 + 6 - halfView);
   const tx = clamp(b.x - FW / 2 + (view.players.length ? 0 : 0), -lim, lim);
@@ -1673,14 +1732,15 @@ buildStadium();
 //  Input: keyboard, and touch (left = joystick, right = buttons)
 // =====================================================================
 const keys = new Set();
-const ctl = { pc: 0, sc: 0, wc: 0 };
+const ctl = { pc: 0, sc: 0, tc: 0, wc: 0 };
 let isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
   if (!e.repeat) {
     if (e.code === "KeyJ" || e.code === "KeyX") ctl.pc++;
     if (e.code === "KeyK" || e.code === "Space") ctl.sc++;
-    if (e.code === "KeyQ" || e.code === "KeyL") ctl.wc++;
+    if (e.code === "KeyL" || e.code === "KeyI") ctl.tc++;
+    if (e.code === "KeyQ") ctl.wc++;
   }
   keys.add(e.code);
   if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
@@ -1691,28 +1751,37 @@ addEventListener("blur", () => keys.clear());
 const ui = $("ui"), uctx = ui.getContext("2d");
 let W = 0, H = 0, udpr = 1;
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
-const touchBtn = { shoot: null, pass: null, sprint: null };
-const STICK_R = 55;
+const touchBtn = { shoot: null, pass: null, thru: null, sprint: null };
+const STICK_R = 60;
+// Four buttons in an arc in the bottom-right corner, the big one under the thumb
 function buttonLayout() {
-  const s = clamp(Math.min(W, H) / 390, 0.85, 1.2);
+  const s = clamp(Math.min(W, H) / 390, 0.85, 1.25);
+  const ex = W - 20 * s, ey = H - 18 * s;          // the corner they arc around
   return {
-    shoot: { x: W - 72 * s, y: H - 86 * s, r: 44 * s },
-    pass: { x: W - 178 * s, y: H - 56 * s, r: 38 * s },
-    sprint: { x: W - 168 * s, y: H - 160 * s, r: 31 * s },
+    shoot: { x: ex - 58 * s, y: ey - 62 * s, r: 50 * s, big: true },
+    pass: { x: ex - 168 * s, y: ey - 42 * s, r: 38 * s },
+    thru: { x: ex - 150 * s, y: ey - 142 * s, r: 34 * s },
+    sprint: { x: ex - 48 * s, y: ey - 172 * s, r: 34 * s },
   };
 }
+function stickHome() { return { x: 100 * clamp(Math.min(W, H) / 390, 0.85, 1.25), y: H - 100 * clamp(Math.min(W, H) / 390, 0.85, 1.25) }; }
 ui.addEventListener("pointerdown", (e) => {
   if (e.pointerType !== "mouse") isTouch = true;
   if (e.pointerType === "mouse") return;
   initAudio();
   const L = buttonLayout();
   let hit = null, hd = 1e9;
-  for (const [k, b] of Object.entries(L)) { const d = hyp(e.clientX - b.x, e.clientY - b.y); if (d < b.r + 20 && d - b.r < hd) { hd = d - b.r; hit = k; } }
+  for (const [k, b] of Object.entries(L)) { const d = hyp(e.clientX - b.x, e.clientY - b.y); if (d < b.r + 16 && d - b.r < hd) { hd = d - b.r; hit = k; } }
   if (hit && touchBtn[hit] === null) {
     touchBtn[hit] = e.pointerId;
     if (hit === "pass") ctl.pc++;
     if (hit === "shoot") ctl.sc++;
-  } else if (!hit && e.clientX < W * 0.5 && stick.id === null) Object.assign(stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY });
+    if (hit === "thru") ctl.tc++;
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch (err) {}
+  } else if (!hit && e.clientX < W * 0.5 && stick.id === null) {
+    // The stick starts where you put your thumb (anywhere on the left half)
+    Object.assign(stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY });
+  }
 });
 ui.addEventListener("pointermove", (e) => { if (e.pointerId === stick.id) { stick.x = e.clientX; stick.y = e.clientY; } });
 const endPointer = (e) => {
@@ -1725,7 +1794,7 @@ ui.addEventListener("pointercancel", endPointer);
 // Screen direction -> pitch direction (the camera looks across the pitch from the near touchline)
 function readInput() {
   if (myTeam() === "s" || document.querySelector(".overlay:not(.hidden):not(#end)"))
-    return { x: 0, y: 0, s: false, p: false, r: false, sc: ctl.sc, pc: ctl.pc, wc: ctl.wc };
+    return { x: 0, y: 0, s: false, p: false, t: false, r: false, sc: ctl.sc, pc: ctl.pc, tc: ctl.tc, wc: ctl.wc };
   let sx = 0, sy = 0;
   if (keys.has("ArrowLeft") || keys.has("KeyA")) sx -= 1;
   if (keys.has("ArrowRight") || keys.has("KeyD")) sx += 1;
@@ -1740,8 +1809,9 @@ function readInput() {
     x: sx, y: sy,
     s: keys.has("KeyK") || keys.has("Space") || touchBtn.shoot !== null,
     p: keys.has("KeyJ") || keys.has("KeyX") || touchBtn.pass !== null,
+    t: keys.has("KeyL") || keys.has("KeyI") || touchBtn.thru !== null,
     r: keys.has("ShiftLeft") || keys.has("ShiftRight") || touchBtn.sprint !== null,
-    sc: ctl.sc, pc: ctl.pc, wc: ctl.wc,
+    sc: ctl.sc, pc: ctl.pc, tc: ctl.tc, wc: ctl.wc,
   };
 }
 
@@ -1907,25 +1977,33 @@ function drawUI(dt) {
 
   // Touch controls
   if (!isTouch || myTeam() === "s") return;
-  const jx = stick.id !== null ? stick.ox : 90, jy = stick.id !== null ? stick.oy : H - 95;
-  uctx.globalAlpha = stick.id !== null ? 0.45 : 0.22;
-  uctx.fillStyle = "#000"; uctx.beginPath(); uctx.arc(jx, jy, STICK_R, 0, Math.PI * 2); uctx.fill();
-  uctx.strokeStyle = "#fff"; uctx.lineWidth = 2; uctx.stroke();
+  const home = stickHome();
+  const jx = stick.id !== null ? stick.ox : home.x, jy = stick.id !== null ? stick.oy : home.y;
+  uctx.fillStyle = "rgba(0,0,0,0.28)"; uctx.beginPath(); uctx.arc(jx, jy, STICK_R, 0, Math.PI * 2); uctx.fill();
+  uctx.strokeStyle = "rgba(255,255,255,0.55)"; uctx.lineWidth = 2.5; uctx.stroke();
   let kx = jx, ky = jy;
   if (stick.id !== null) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = hyp(dx, dy), m = Math.min(d, STICK_R); if (d > 0) { kx = jx + dx / d * m; ky = jy + dy / d * m; } }
-  uctx.globalAlpha = 0.7; uctx.fillStyle = "#fff"; uctx.beginPath(); uctx.arc(kx, ky, 24, 0, Math.PI * 2); uctx.fill();
-  uctx.globalAlpha = 1;
+  uctx.fillStyle = "rgba(255,255,255,0.85)"; uctx.beginPath(); uctx.arc(kx, ky, 26, 0, Math.PI * 2); uctx.fill();
   const onBall = me && ((me.k & 4) || (view.ob === -1 && view.ball.z < 1 && hyp(view.ball.x - me.x, view.ball.y - me.y) < 2.2));
   const L = buttonLayout();
-  const btn = (b, label, color, active) => {
-    uctx.globalAlpha = active ? 0.92 : 0.55; uctx.fillStyle = color;
+  // Dark glassy buttons with a coloured ring; the big one is the main action
+  const btn = (b, label, ring, active, icon) => {
+    uctx.fillStyle = active ? "rgba(255,255,255,0.35)" : "rgba(8,14,26,0.55)";
     uctx.beginPath(); uctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); uctx.fill();
-    uctx.globalAlpha = 1; uctx.lineWidth = 2; uctx.strokeStyle = "rgba(255,255,255,0.5)"; uctx.stroke();
-    txt(label, b.x, b.y + 1, Math.round(b.r * 0.34), "#151515", 900, false);
+    uctx.lineWidth = b.big ? 4 : 3; uctx.strokeStyle = ring; uctx.stroke();
+    if (icon) txt(icon, b.x, b.y - b.r * 0.16, Math.round(b.r * 0.5), "#fff", 800, false);
+    txt(label, b.x, b.y + (icon ? b.r * 0.38 : 1), Math.round(b.r * (icon ? 0.24 : 0.3)), "#fff", 900, false);
   };
-  btn(L.shoot, onBall ? "SHOOT" : "SWITCH", onBall ? "#ffd23f" : "#e9eef5", touchBtn.shoot !== null);
-  btn(L.pass, onBall ? "PASS" : "TACKLE", onBall ? "#8ecbff" : "#ff8a7a", touchBtn.pass !== null);
-  btn(L.sprint, "SPRINT", "#b6f0a8", touchBtn.sprint !== null);
+  if (onBall) {
+    btn(L.shoot, "SHOOT", "#ffd23f", touchBtn.shoot !== null, "⚽");
+    btn(L.pass, "PASS", "#7cc4ff", touchBtn.pass !== null, "➜");
+    btn(L.thru, "THROUGH", "#7ee081", touchBtn.thru !== null, "⇢");
+  } else {
+    btn(L.shoot, "TACKLE", "#ff7a6b", touchBtn.shoot !== null, "✖");
+    btn(L.pass, "SWITCH", "#d6dbe4", touchBtn.pass !== null, "⇄");
+    btn(L.thru, "PRESS", "#ffb35c", touchBtn.thru !== null, "◎");
+  }
+  btn(L.sprint, "SPRINT", "#b6f0a8", touchBtn.sprint !== null, "»");
 }
 
 // =====================================================================
@@ -1935,14 +2013,20 @@ function resize() {
   W = innerWidth; H = innerHeight;
   renderer.setSize(W, H, false);
   camera.aspect = W / Math.max(1, H); camera.updateProjectionMatrix();
-  udpr = Math.min(window.devicePixelRatio || 1, 2);
+  udpr = Math.min(window.devicePixelRatio || 1, 1.5);
   ui.width = Math.round(W * udpr); ui.height = Math.round(H * udpr);
 }
 addEventListener("resize", resize);
 resize();
-let lastFrame = performance.now();
+let lastFrame = performance.now(), perfT = 0, perfN = 0;
 function frame() {
   const now = performance.now(), dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+  // Every 2 s: if the phone can't keep up, draw at a lower resolution
+  perfT += dt; perfN++;
+  if (perfT > 2) {
+    const fps = perfN / perfT; perfT = 0; perfN = 0;
+    if (role && fps < 45 && gfxScale > 0.75) { gfxScale = Math.max(0.75, gfxScale - 0.25); renderer.setPixelRatio(gfxScale); renderer.setSize(W, H, false); }
+  }
   if (role === "host") hostView(); else if (role === "client") clientView(dt);
   if (view.phase === "goal" && phaseSeen !== "goal") { goalAt = now; goalTeam = view.score[0] > prevScore[0] ? "r" : "b"; startConfetti(goalTeam); }
   phaseSeen = view.phase;
