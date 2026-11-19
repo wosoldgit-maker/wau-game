@@ -122,3 +122,19 @@ A 3D football game in `bola/` for playing with friends over a link, in the style
 - Some strict school or office networks block WebRTC, and then a player can't join.
 
 Play it at `/bola/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/bola/
+
+---
+
+# Tonton
+
+An ad-free video search and player in `tonton/index.html`.
+
+- Type in the search box to find videos, or paste a YouTube link (youtu.be, watch?v=, shorts) to play it straight away.
+- Videos play in the page's own video player, not YouTube's, so there are no ads. Quality can be changed, and **⧉ Mini** opens picture-in-picture.
+- Search results and streams come from public open-source servers (Invidious and Piped). If a server is down or a stream fails, the next server is tried automatically. If none gives a direct stream, the video plays through an Invidious embed instead.
+- **⚙️** shows the server list: test them, remove dead ones, or add your own server. Options: prefer the HD (HLS) stream when available, and auto-play the next related video.
+- Recent searches and watched videos are saved on the device.
+
+Public servers come and go and sometimes block requests from other sites; if nothing loads, add a working server from https://api.invidious.io or https://github.com/TeamPiped/documentation in ⚙️.
+
+Play it at `/tonton/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/tonton/
