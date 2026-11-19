@@ -127,14 +127,22 @@ Play it at `/bola/` on the same site, for example https://wosoldgit-maker.github
 
 # Tonton
 
-An ad-free video search and player in `tonton/index.html`.
+An ad-free video search and player in `tonton/`. It searches many video sites at once and plays the videos in its own player.
 
-- Type in the search box to find videos, or paste a YouTube link (youtu.be, watch?v=, shorts) to play it straight away.
-- Videos play in the page's own video player, not YouTube's, so there are no ads. Quality can be changed, and **⧉ Mini** opens picture-in-picture.
-- Search results and streams come from public open-source servers (Invidious and Piped). If a server is down or a stream fails, the next server is tried automatically. If none gives a direct stream, the video plays through an Invidious embed instead.
-- **⚙️** shows the server list: test them, remove dead ones, or add your own server. Options: prefer the HD (HLS) stream when available, and auto-play the next related video.
-- Recent searches and watched videos are saved on the device.
+**Sites searched:** YouTube, PeerTube (thousands of servers, through Sepia Search), Archive.org, Dailymotion, Odysee, Wikimedia Commons and NASA. **All sites** mixes the results together, each with a coloured tag showing where it's from. Tap a site name to search only that site. In **⚙️** you choose which sites "All sites" includes.
 
-Public servers come and go and sometimes block requests from other sites; if nothing loads, add a working server from https://api.invidious.io or https://github.com/TeamPiped/documentation in ⚙️.
+**Pasting links:** links from any of those sites play straight away, and so do Vimeo links, links to a video on any PeerTube server, and direct `.mp4`, `.webm` or `.m3u8` links from any website.
+
+**No ads:** videos play in the page's own video player from a direct stream, never the site's own player:
+- YouTube comes through ad-free open-source servers (Invidious and Piped). If a server is down or a stream fails, the next one is tried automatically.
+- PeerTube, Archive.org, Odysee, Wikimedia and NASA files play directly.
+- Vimeo plays in Vimeo's own player, which has no ads.
+- When a site won't give a direct stream (often Dailymotion), Tonton says so and offers **Play in the site's player (may show ads)** or **Open on the site**. Turn on "Allow a site's own player" in ⚙️ to skip that question.
+
+**Player:** quality picker (or a list of parts when an Archive.org item holds several videos, which then play one after another), **⧉ Mini** for picture-in-picture, Share, and Open on the original site. HLS streams play in every browser: `hls.min.js` (hls.js 1.5.13, Apache-2.0) is copied into the folder and loaded only when the browser can't play HLS itself.
+
+**Saved on the device:** recent searches and a "Continue watching" list.
+
+Public servers come and go and some sites block requests from other websites. A site that fails shows ✕ in the counts above the results, and the other sites still work. For YouTube you can add a working server from https://api.invidious.io in ⚙️.
 
 Play it at `/tonton/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/tonton/
