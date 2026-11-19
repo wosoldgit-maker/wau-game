@@ -121,6 +121,7 @@
   <label class="tog"><input type="checkbox" id="optHls"> Prefer HD stream (HLS) when offered</label>
   <label class="tog"><input type="checkbox" id="optAuto"> Auto-play the next video</label>
   <label class="tog"><input type="checkbox" id="optAds"> Allow a site's own player when no direct stream is possible (it may show ads)</label>
+  <label class="tog"><input type="checkbox" id="optSafe"> Safe mode: hide mature / NSFW results</label>
   <h2>YouTube servers</h2>
   <p class="small">YouTube videos come through ad-free open-source servers (Invidious and Piped), never YouTube's own player. Public servers go up and down; if one fails the next is tried automatically.</p>
   <div id="srvList"></div>
@@ -188,7 +189,7 @@ async function fetchJSON(url, ms = 10000, init = {}) {
   } finally { clearTimeout(t); }
 }
 
-const opts = Object.assign({ hls: true, auto: false, ads: false, site: "all", off: [] }, store.get("opts", {}));
+const opts = Object.assign({ hls: true, auto: false, ads: false, safe: false, site: "all", off: [] }, store.get("opts", {}));
 const saveOpts = () => store.set("opts", opts);
 
 // =====================================================================
@@ -309,7 +310,7 @@ const SITES = {
     name: "PeerTube", color: "#f1680d",
     async search(q, cur) {
       const start = cur || 0;
-      const j = await fetchJSON(`https://sepiasearch.org/api/v1/search/videos?search=${enc(q)}&start=${start}&count=20&sort=-match&nsfw=false`);
+      const j = await fetchJSON(`https://sepiasearch.org/api/v1/search/videos?search=${enc(q)}&start=${start}&count=20&sort=-match&nsfw=${opts.safe ? "false" : "both"}`);
       const items = (j.data || []).map(v => {
         const h = host(v.url || "") || v.channel?.host || v.account?.host;
         return { src: "pt", id: `${h}/${v.uuid}`, title: v.name, author: v.channel?.displayName || v.account?.displayName,
@@ -372,13 +373,13 @@ const SITES = {
     name: "Dailymotion", color: "#0d66ff",
     async search(q, cur) {
       const page = cur || 1;
-      const j = await fetchJSON(`https://api.dailymotion.com/videos?search=${enc(q)}&fields=id,title,owner.screenname,duration,views_total,created_time,thumbnail_360_url&limit=20&page=${page}`);
+      const j = await fetchJSON(`https://api.dailymotion.com/videos?search=${enc(q)}&fields=id,title,owner.screenname,duration,views_total,created_time,thumbnail_360_url&limit=20&page=${page}&family_filter=${opts.safe}`);
       const items = (j.list || []).map(v => ({ src: "dm", id: v.id, title: v.title, author: v["owner.screenname"], length: v.duration,
         views: v.views_total, when: ago(v.created_time), thumb: v.thumbnail_360_url }));
       return { items, next: j.has_more ? page + 1 : null };
     },
     async resolve(id) {
-      const info = await fetchJSON(`https://api.dailymotion.com/video/${id}?fields=title,owner.screenname,description,views_total,created_time`).catch(() => ({}));
+      const info = await fetchJSON(`https://api.dailymotion.com/video/${id}?fields=title,owner.screenname,description,views_total,created_time&family_filter=${opts.safe}`).catch(() => ({}));
       const sources = [];
       try {   // Direct HLS stream (works when Dailymotion allows it from this site)
         const m = await fetchJSON(`https://www.dailymotion.com/player/metadata/video/${id}`, 8000);
@@ -396,7 +397,7 @@ const SITES = {
     name: "Odysee", color: "#e50054",
     async search(q, cur) {
       const from = cur || 0;
-      const hits = await fetchJSON(`https://lighthouse.odysee.tv/search?s=${enc(q)}&size=20&from=${from}&claimType=file&mediaType=video&free_only=true&nsfw=false`);
+      const hits = await fetchJSON(`https://lighthouse.odysee.tv/search?s=${enc(q)}&size=20&from=${from}&claimType=file&mediaType=video&free_only=true&nsfw=${!opts.safe}`);
       if (!Array.isArray(hits) || !hits.length) return { items: [], next: null };
       const claims = await odResolve(hits.map(h => `lbry://${h.name}#${h.claimId}`));
       const items = Object.values(claims).filter(c => c && c.claim_id && c.value?.source).map(odItem);
@@ -837,7 +838,7 @@ $("#siteOpts").onchange = e => {
   saveOpts();
 };
 $("#setBtn").onclick = () => {
-  $("#optHls").checked = opts.hls; $("#optAuto").checked = opts.auto; $("#optAds").checked = opts.ads;
+  $("#optHls").checked = opts.hls; $("#optAuto").checked = opts.auto; $("#optAds").checked = opts.ads; $("#optSafe").checked = opts.safe;
   drawSiteOpts(); drawServers(); dlg.showModal();
 };
 $("#closeSet").onclick = () => dlg.close();
@@ -866,6 +867,7 @@ $("#testSrv").onclick = async () => {
 $("#optHls").onchange = e => { opts.hls = e.target.checked; saveOpts(); };
 $("#optAuto").onchange = e => { opts.auto = e.target.checked; saveOpts(); };
 $("#optAds").onchange = e => { opts.ads = e.target.checked; saveOpts(); };
+$("#optSafe").onchange = e => { opts.safe = e.target.checked; saveOpts(); };
 
 drawSites();
 route();

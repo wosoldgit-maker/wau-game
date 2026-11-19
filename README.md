@@ -141,6 +141,8 @@ An ad-free video search and player in `tonton/`. It searches many video sites at
 
 **Player:** quality picker (or a list of parts when an Archive.org item holds several videos, which then play one after another), **⧉ Mini** for picture-in-picture, Share, and Open on the original site. HLS streams play in every browser: `hls.min.js` (hls.js 1.5.13, Apache-2.0) is copied into the folder and loaded only when the browser can't play HLS itself.
 
+**No content filter:** results are unfiltered by default. PeerTube and Odysee include videos marked NSFW/mature, and Dailymotion's family filter is off. Turn on **Safe mode** in ⚙️ to hide mature results (the setting is saved on that device). YouTube age-restricted videos often can't be played through the Invidious/Piped servers; that's a limit of those servers, not a filter in Tonton.
+
 **Saved on the device:** recent searches and a "Continue watching" list.
 
 Public servers come and go and some sites block requests from other websites. A site that fails shows ✕ in the counts above the results, and the other sites still work. For YouTube you can add a working server from https://api.invidious.io in ⚙️.
