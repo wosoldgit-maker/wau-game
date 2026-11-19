@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tonton</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tonton">
+<meta name="theme-color" content="#0f1115">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e5484d'/%3E%3Cpath d='M25 19l22 13-22 13z' fill='white'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0f1115; --panel: #181b22; --panel2: #222631; --text: #eef0f4; --muted: #9aa3b2;
+    --accent: #e5484d; --ok: #3dd68c; --border: #2b303c;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f6f7f9; --panel: #ffffff; --panel2: #eceef2; --text: #14161b; --muted: #5d6573; --border: #dde0e6; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  header { position: sticky; top: 0; z-index: 10; background: var(--bg);
+    padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; border-bottom: 1px solid var(--border); }
+  .bar { display: flex; gap: 8px; align-items: center; max-width: 1100px; margin: 0 auto; }
+  .logo { font-weight: 800; font-size: 20px; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  form { flex: 1; display: flex; min-width: 0; }
+  #q { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 22px 0 0 22px; border: 1px solid var(--border);
+    background: var(--panel); outline: none; font-size: 16px; }
+  #q:focus { border-color: var(--accent); }
+  .go { padding: 0 16px; border: 1px solid var(--border); border-left: 0; border-radius: 0 22px 22px 0; background: var(--panel2); }
+  .icon-btn { background: none; border: 0; font-size: 20px; padding: 6px; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 12px 16px calc(env(safe-area-inset-bottom) + 24px); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+  .chip { padding: 6px 12px; border-radius: 16px; background: var(--panel2); border: 0; font-size: 14px; }
+  .status { color: var(--muted); padding: 12px 0; }
+  .status.err { color: var(--accent); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .card { display: block; color: inherit; text-decoration: none; }
+  .thumb { position: relative; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; background: var(--panel2); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dur { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.8); color: #fff; font-size: 12px;
+    padding: 1px 5px; border-radius: 4px; }
+  .live { background: var(--accent); }
+  .title { font-weight: 600; margin: 8px 0 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .more { display: block; margin: 20px auto; padding: 10px 24px; border-radius: 20px; border: 1px solid var(--border); background: var(--panel); }
+
+  /* Watch page */
+  .watch { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  @media (min-width: 900px) { .watch { grid-template-columns: minmax(0, 1fr) 340px; } }
+  .player { position: relative; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
+  .player video, .player iframe { width: 100%; height: 100%; border: 0; display: block; background: #000; }
+  .player .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #ccc; text-align: center; padding: 20px; }
+  .vtitle { font-size: 18px; font-weight: 700; margin: 12px 0 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  .controls select, .controls button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); }
+  .source { color: var(--muted); font-size: 12px; }
+  .desc { white-space: pre-wrap; background: var(--panel); border-radius: 10px; padding: 12px; font-size: 14px;
+    max-height: 120px; overflow: hidden; position: relative; cursor: pointer; overflow-wrap: anywhere; }
+  .desc.open { max-height: none; }
+  .related .card { display: grid; grid-template-columns: 160px 1fr; gap: 10px; margin-bottom: 12px; }
+  .related .title { margin-top: 0; font-size: 14px; }
+
+  /* Settings */
+  dialog { border: 1px solid var(--border); border-radius: 14px; background: var(--panel); color: var(--text);
+    width: min(520px, calc(100vw - 32px)); padding: 16px; }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { margin: 0 0 8px; font-size: 18px; }
+  .srv { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .srv span.u { flex: 1; overflow-wrap: anywhere; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--accent); }
+  .srv button { border: 0; background: none; color: var(--muted); }
+  .row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .row input, .row select { padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); }
+  .row input { flex: 1; min-width: 160px; }
+  .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  label.tog { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+  .small { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <a class="logo" href="#/">▶ Tonton</a>
+    <form id="sf">
+      <input id="q" type="search" placeholder="Search videos or paste a YouTube link" autocomplete="off" enterkeyhint="search">
+      <button class="go" aria-label="Search">🔍</button>
+    </form>
+    <button class="icon-btn" id="setBtn" aria-label="Settings">⚙️</button>
+  </div>
+</header>
+<main id="app"></main>
+
+<dialog id="settings">
+  <h2>Servers</h2>
+  <p class="small">Videos come from ad-free open-source servers (Invidious and Piped), not from YouTube's own player, so there are no ads. Public servers go up and down; if one fails the next one is tried automatically.</p>
+  <div id="srvList"></div>
+  <div class="row">
+    <select id="newType"><option value="inv">Invidious</option><option value="piped">Piped API</option></select>
+    <input id="newUrl" placeholder="https://your.server">
+    <button class="btn" id="addSrv">Add</button>
+  </div>
+  <label class="tog"><input type="checkbox" id="optHls"> Prefer HD stream (HLS) when the server offers it</label>
+  <label class="tog"><input type="checkbox" id="optAuto"> Auto-play the next related video</label>
+  <div class="row">
+    <button class="btn" id="testSrv">Test all</button>
+    <button class="btn" id="resetSrv">Reset list</button>
+    <button class="btn" id="clearHist">Clear history</button>
+    <span style="flex:1"></span>
+    <button class="btn primary" id="closeSet">Done</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+
+// ---------- Servers ----------
+// inv = Invidious (https://invidious.io), piped = Piped API (https://github.com/TeamPiped/Piped)
+const DEFAULT_SERVERS = [
+  { type: "inv",   url: "https://inv.nadeko.net" },
+  { type: "inv",   url: "https://yewtu.be" },
+  { type: "inv",   url: "https://invidious.nerdvpn.de" },
+  { type: "inv",   url: "https://invidious.f5.si" },
+  { type: "inv",   url: "https://inv.tux.pizza" },
+  { type: "inv",   url: "https://invidious.privacyredirect.com" },
+  { type: "inv",   url: "https://iv.melmac.space" },
+  { type: "piped", url: "https://pipedapi.kavin.rocks" },
+  { type: "piped", url: "https://api.piped.private.coffee" },
+  { type: "piped", url: "https://pipedapi.adminforge.de" },
+  { type: "piped", url: "https://pipedapi.leptons.xyz" },
+  { type: "piped", url: "https://pipedapi.reallyaweso.me" },
+];
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("tonton." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("tonton." + k, JSON.stringify(v)); } catch {} },
+};
+
+let servers = store.get("servers", null) || DEFAULT_SERVERS.slice();
+let lastGood = store.get("lastGood", null);       // url of the last server that worked
+const health = {};                                 // url -> "ok" | "bad"
+const opts = Object.assign({ hls: true, auto: false }, store.get("opts", {}));
+
+const norm = u => u.trim().replace(/\/+$/, "");
+const saveServers = () => store.set("servers", servers);
+
+function ordered() {
+  // Last working server first, then ones not known to be broken, then the rest.
+  const rank = s => (s.url === lastGood ? 0 : health[s.url] === "ok" ? 1 : health[s.url] === "bad" ? 3 : 2);
+  return servers.slice().sort((a, b) => rank(a) - rank(b));
+}
+
+async function fetchJSON(url, ms = 9000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, referrerPolicy: "no-referrer" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    if (j && j.error) throw new Error(j.error);
+    return j;
+  } finally { clearTimeout(t); }
+}
+
+// Try servers in small parallel batches; the first good answer wins.
+async function tryServers(fn, skip) {
+  let list = ordered();
+  if (skip) list = list.filter(s => !skip.has(s.url));
+  const BATCH = 3;
+  for (let i = 0; i < list.length; i += BATCH) {
+    const batch = list.slice(i, i + BATCH);
+    try {
+      return await Promise.any(batch.map(async s => {
+        try {
+          const data = await fn(s);
+          health[s.url] = "ok";
+          return { server: s, data };
+        } catch (e) { health[s.url] = "bad"; throw e; }
+      }));
+    } catch { /* whole batch failed, next batch */ }
+  }
+  throw new Error("No server answered. Open ⚙️ to test or add a server.");
+}
+function markGood(s) { lastGood = s.url; store.set("lastGood", lastGood); }
+
+// ---------- Normalised API ----------
+const ytThumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+
+function fromInv(v) {
+  return { id: v.videoId, title: v.title, author: v.author, length: v.lengthSeconds,
+    views: v.viewCount, when: v.publishedText || "", live: !!v.liveNow };
+}
+function fromPiped(v) {
+  const id = (v.url || "").split("v=")[1];
+  return { id, title: v.title, author: v.uploaderName || v.uploader, length: v.duration,
+    views: v.views, when: v.uploadedDate || "", live: v.duration === -1 || v.isLive };
+}
+
+async function searchOn(s, q, page) {
+  if (s.type === "inv") {
+    const j = await fetchJSON(`${s.url}/api/v1/search?q=${encodeURIComponent(q)}&type=video&page=${page || 1}`);
+    if (!Array.isArray(j)) throw new Error("bad");
+    return { items: j.filter(v => v.type === "video").map(fromInv), next: (page || 1) + 1 };
+  }
+  const path = page ? `/nextpage/search?q=${encodeURIComponent(q)}&filter=videos&nextpage=${encodeURIComponent(page)}`
+                    : `/search?q=${encodeURIComponent(q)}&filter=videos`;
+  const j = await fetchJSON(s.url + path);
+  if (!j || !Array.isArray(j.items)) throw new Error("bad");
+  return { items: j.items.filter(v => v.type === "stream" || (v.url || "").includes("v=")).map(fromPiped), next: j.nextpage || null };
+}
+
+async function trendingOn(s) {
+  if (s.type === "inv") {
+    const j = await fetchJSON(`${s.url}/api/v1/popular`);
+    if (!Array.isArray(j) || !j.length) throw new Error("empty");
+    return j.map(fromInv);
+  }
+  const j = await fetchJSON(`${s.url}/trending?region=MY`);
+  if (!Array.isArray(j) || !j.length) throw new Error("empty");
+  return j.map(fromPiped);
+}
+
+// Returns { title, author, desc, views, sources: [{label, src, hls}], related: [...] }
+async function videoOn(s, id) {
+  const canHls = !!document.createElement("video").canPlayType("application/vnd.apple.mpegurl");
+  if (s.type === "inv") {
+    const j = await fetchJSON(`${s.url}/api/v1/videos/${id}?local=true`, 12000);
+    const sources = [];
+    if (j.hlsUrl && canHls) sources.push({ label: "Live", src: abs(s.url, j.hlsUrl), hls: true });
+    (j.formatStreams || []).slice().sort((a, b) => parseInt(b.qualityLabel || b.resolution) - parseInt(a.qualityLabel || a.resolution))
+      .forEach(f => sources.push({ label: f.qualityLabel || f.resolution || f.itag,
+        src: `${s.url}/latest_version?id=${id}&itag=${f.itag}&local=true` }));
+    if (!sources.length) throw new Error("no streams");
+    return { title: j.title, author: j.author, desc: j.description || "", views: j.viewCount, when: j.publishedText,
+      sources, related: (j.recommendedVideos || []).map(fromInv) };
+  }
+  const j = await fetchJSON(`${s.url}/streams/${id}`, 12000);
+  const sources = [];
+  if (j.hls && canHls) sources.push({ label: "HD (auto)", src: j.hls, hls: true });
+  (j.videoStreams || []).filter(v => !v.videoOnly).sort((a, b) => parseInt(b.quality) - parseInt(a.quality))
+    .forEach(v => sources.push({ label: v.quality, src: v.url }));
+  if (!sources.length) throw new Error("no streams");
+  return { title: j.title, author: j.uploader, desc: stripHtml(j.description || ""), views: j.views, when: j.uploadDate,
+    sources, related: (j.relatedStreams || []).filter(v => (v.url || "").includes("v=")).map(fromPiped) };
+}
+const abs = (base, u) => (u.startsWith("/") ? base + u : u);
+
+// ---------- Helpers ----------
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function stripHtml(h) { const d = document.createElement("div"); d.innerHTML = h.replace(/<br\s*\/?>/gi, "\n"); return d.textContent; }
+function dur(s) {
+  if (!s || s < 0) return "";
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`;
+}
+function num(n) {
+  if (n == null || n < 0) return "";
+  return n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n);
+}
+function ytId(text) {
+  const m = text.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+function card(v) {
+  const badge = v.live ? `<span class="dur live">LIVE</span>` : v.length ? `<span class="dur">${dur(v.length)}</span>` : "";
+  const meta = [v.author, v.views != null && v.views >= 0 ? num(v.views) + " views" : "", v.when].filter(Boolean).map(esc).join(" · ");
+  return `<a class="card" href="#/watch/${v.id}">
+    <div class="thumb"><img loading="lazy" src="${ytThumb(v.id)}" alt="">${badge}</div>
+    <div><div class="title">${esc(v.title)}</div><div class="meta">${meta}</div></div></a>`;
+}
+
+// ---------- History ----------
+const pushHist = (k, item, key, max) => {
+  const list = store.get(k, []).filter(x => (key ? x[key] !== item[key] : x !== item));
+  list.unshift(item); store.set(k, list.slice(0, max));
+};
+
+// ---------- Pages ----------
+let renderToken = 0;
+
+async function pageHome() {
+  const tok = ++renderToken;
+  $("#q").value = "";
+  const recent = store.get("searches", []);
+  const watched = store.get("watched", []);
+  app.innerHTML = `
+    ${recent.length ? `<div class="chips">${recent.map(q => `<button class="chip" data-q="${esc(q)}">🕘 ${esc(q)}</button>`).join("")}</div>` : ""}
+    ${watched.length ? `<h3>Continue watching</h3><div class="grid">${watched.slice(0, 8).map(card).join("")}</div>` : ""}
+    <h3>Popular</h3><div id="pop" class="status">Loading…</div>`;
+  try {
+    const { server, data } = await tryServers(s => trendingOn(s));
+    if (tok !== renderToken) return;
+    markGood(server);
+    $("#pop").outerHTML = `<div class="grid">${data.slice(0, 24).map(card).join("")}</div>`;
+  } catch (e) {
+    if (tok !== renderToken) return;
+    $("#pop").textContent = "Search for something above to start.";
+  }
+}
+
+async function pageSearch(q) {
+  const tok = ++renderToken;
+  $("#q").value = q;
+  pushHist("searches", q, null, 8);
+  app.innerHTML = `<div class="status">Searching “${esc(q)}”…</div>`;
+  let server, res;
+  try {
+    ({ server, data: res } = await tryServers(s => searchOn(s, q)));
+  } catch (e) {
+    if (tok === renderToken) app.innerHTML = `<div class="status err">${esc(e.message)}</div>`;
+    return;
+  }
+  if (tok !== renderToken) return;
+  markGood(server);
+  if (!res.items.length) { app.innerHTML = `<div class="status">No videos found.</div>`; return; }
+  app.innerHTML = `<div class="grid" id="res">${res.items.map(card).join("")}</div>
+    <button class="more" id="more">Load more</button>`;
+  let next = res.next;
+  const seen = new Set(res.items.map(v => v.id));
+  $("#more").onclick = async () => {
+    const b = $("#more"); b.disabled = true; b.textContent = "Loading…";
+    try {
+      const r = await searchOn(server, q, next);
+      next = r.next;
+      const fresh = r.items.filter(v => !seen.has(v.id)); fresh.forEach(v => seen.add(v.id));
+      $("#res").insertAdjacentHTML("beforeend", fresh.map(card).join(""));
+      b.textContent = "Load more"; b.disabled = false;
+      if (!next || !r.items.length) b.remove();
+    } catch { b.textContent = "Couldn't load more — tap to retry"; b.disabled = false; }
+  };
+}
+
+async function pageWatch(id) {
+  const tok = ++renderToken;
+  app.innerHTML = `<div class="watch">
+    <div>
+      <div class="player" id="player"><div class="msg">Finding an ad-free stream…</div></div>
+      <div class="vtitle" id="vt"></div>
+      <div class="meta" id="vm"></div>
+      <div class="controls" id="ctl"></div>
+      <div class="desc" id="desc" hidden></div>
+    </div>
+    <div class="related" id="rel"></div>
+  </div>`;
+  window.scrollTo(0, 0);
+
+  // Try every server until one gives a stream the browser can actually play.
+  const tried = new Set();
+  const attempt = async () => {
+    let got;
+    try {
+      got = await tryServers(s => videoOn(s, id), tried);
+    } catch {
+      return embedFallback();
+    }
+    if (tok !== renderToken) return;
+    tried.add(got.server.url);
+    show(got.server, got.data);
+  };
+
+  const embedFallback = () => {
+    if (tok !== renderToken) return;
+    const inv = ordered().find(s => s.type === "inv");
+    const p = $("#player");
+    p.innerHTML = inv
+      ? `<iframe src="${inv.url}/embed/${id}?autoplay=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`
+      : `<div class="msg">No server could play this video.</div>`;
+    $("#ctl").innerHTML = `<span class="source">Playing through ${esc(inv ? host(inv.url) : "")} embed</span>
+      <button id="retry">Retry streams</button>`;
+    $("#retry").onclick = () => { tried.clear(); attempt(); };
+  };
+
+  const show = (server, v) => {
+    $("#vt").textContent = v.title;
+    $("#vm").textContent = [v.author, v.views ? num(v.views) + " views" : "", v.when].filter(Boolean).join(" · ");
+    document.title = v.title + " · Tonton";
+    pushHist("watched", { id, title: v.title, author: v.author }, "id", 30);
+
+    if (v.desc) {
+      const d = $("#desc"); d.hidden = false; d.textContent = v.desc;
+      d.onclick = () => d.classList.toggle("open");
+    }
+    $("#rel").innerHTML = v.related.length ? `<h3 style="margin-top:0">Up next</h3>` + v.related.slice(0, 20).map(card).join("") : "";
+
+    let srcs = v.sources;
+    if (!opts.hls) srcs = srcs.filter(x => !x.hls).concat(srcs.filter(x => x.hls));
+    $("#player").innerHTML = `<video id="vid" controls autoplay playsinline preload="auto"></video>`;
+    const vid = $("#vid");
+    $("#ctl").innerHTML = `<select id="qual">${srcs.map((x, i) => `<option value="${i}">${esc(x.label)}</option>`).join("")}</select>
+      <button id="pip">⧉ Mini</button>
+      <button id="share">🔗 Share</button>
+      <button id="other">↻ Other server</button>
+      <span class="source">via ${esc(host(server.url))} · no ads</span>`;
+
+    let idx = 0, started = false;
+    const load = (i, keepTime) => {
+      const t = keepTime ? vid.currentTime : 0;
+      idx = i; $("#qual").value = i;
+      vid.src = srcs[i].src;
+      vid.addEventListener("loadedmetadata", () => { if (t) vid.currentTime = t; }, { once: true });
+      vid.play().catch(() => {});
+    };
+    vid.addEventListener("playing", () => { started = true; markGood(server); });
+    vid.addEventListener("error", () => {
+      if (tok !== renderToken) return;
+      if (idx + 1 < srcs.length && !started) load(idx + 1);          // next quality on same server
+      else { health[server.url] = "bad"; $("#player").innerHTML = `<div class="msg">Stream failed, trying another server…</div>`; attempt(); }
+    });
+    vid.addEventListener("ended", () => {
+      if (opts.auto && v.related[0]) location.hash = "#/watch/" + v.related[0].id;
+    });
+    $("#qual").onchange = e => load(+e.target.value, true);
+    $("#pip").onclick = () => {
+      if (document.pictureInPictureElement) document.exitPictureInPicture();
+      else if (vid.requestPictureInPicture) vid.requestPictureInPicture().catch(() => {});
+      else if (vid.webkitSetPresentationMode) vid.webkitSetPresentationMode("picture-in-picture");
+    };
+    $("#share").onclick = async () => {
+      const url = location.href;
+      try { if (navigator.share) await navigator.share({ title: v.title, url }); else { await navigator.clipboard.writeText(url); $("#share").textContent = "✓ Copied"; } } catch {}
+    };
+    $("#other").onclick = () => { $("#player").innerHTML = `<div class="msg">Trying another server…</div>`; attempt(); };
+    load(0);
+  };
+
+  attempt();
+}
+const host = u => { try { return new URL(u).host; } catch { return u; } };
+
+// ---------- Router ----------
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  document.title = "Tonton";
+  let m;
+  if ((m = h.match(/^\/watch\/([\w-]{11})/))) return pageWatch(m[1]);
+  if ((m = h.match(/^\/search\/(.+)/))) return pageSearch(m[1]);
+  pageHome();
+}
+window.addEventListener("hashchange", route);
+
+$("#sf").addEventListener("submit", e => {
+  e.preventDefault();
+  const q = $("#q").value.trim();
+  if (!q) return;
+  $("#q").blur();
+  const id = ytId(q);
+  location.hash = id ? "#/watch/" + id : "#/search/" + encodeURIComponent(q);
+});
+app.addEventListener("click", e => {
+  const c = e.target.closest("[data-q]");
+  if (c) location.hash = "#/search/" + encodeURIComponent(c.dataset.q);
+});
+
+// ---------- Settings ----------
+const dlg = $("#settings");
+function drawServers() {
+  $("#srvList").innerHTML = servers.map((s, i) => `<div class="srv">
+    <span class="dot ${health[s.url] || ""}"></span>
+    <span class="u">${esc(host(s.url))} <span class="small">${s.type === "inv" ? "Invidious" : "Piped"}${s.url === lastGood ? " · in use" : ""}</span></span>
+    <button data-del="${i}" aria-label="Remove">✕</button></div>`).join("");
+}
+$("#setBtn").onclick = () => { $("#optHls").checked = opts.hls; $("#optAuto").checked = opts.auto; drawServers(); dlg.showModal(); };
+$("#closeSet").onclick = () => dlg.close();
+$("#srvList").onclick = e => {
+  const b = e.target.closest("[data-del]");
+  if (b) { servers.splice(+b.dataset.del, 1); saveServers(); drawServers(); }
+};
+$("#addSrv").onclick = () => {
+  let u = norm($("#newUrl").value);
+  if (!u) return;
+  if (!/^https?:\/\//.test(u)) u = "https://" + u;
+  servers = servers.filter(s => s.url !== u);
+  servers.unshift({ type: $("#newType").value, url: u });
+  saveServers(); $("#newUrl").value = ""; drawServers();
+};
+$("#resetSrv").onclick = () => { servers = DEFAULT_SERVERS.slice(); saveServers(); drawServers(); };
+$("#clearHist").onclick = () => { store.set("searches", []); store.set("watched", []); $("#clearHist").textContent = "✓ Cleared"; };
+$("#testSrv").onclick = async () => {
+  const b = $("#testSrv"); b.disabled = true; b.textContent = "Testing…";
+  await Promise.all(servers.map(async s => {
+    try { await searchOn(s, "music"); health[s.url] = "ok"; } catch { health[s.url] = "bad"; }
+    drawServers();
+  }));
+  b.disabled = false; b.textContent = "Test all";
+};
+$("#optHls").onchange = e => { opts.hls = e.target.checked; store.set("opts", opts); };
+$("#optAuto").onchange = e => { opts.auto = e.target.checked; store.set("opts", opts); };
+
+route();
+</script>
+</body>
+</html>
