@@ -25,9 +25,10 @@
     -webkit-tap-highlight-color: transparent; }
   button, input, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
+  a { color: inherit; }
 
   header { position: sticky; top: 0; z-index: 10; background: var(--bg);
-    padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; border-bottom: 1px solid var(--border); }
+    padding: calc(env(safe-area-inset-top) + 10px) 16px 0; border-bottom: 1px solid var(--border); }
   .bar { display: flex; gap: 8px; align-items: center; max-width: 1100px; margin: 0 auto; }
   .logo { font-weight: 800; font-size: 20px; color: var(--accent); text-decoration: none; white-space: nowrap; }
   form { flex: 1; display: flex; min-width: 0; }
@@ -36,21 +37,27 @@
   #q:focus { border-color: var(--accent); }
   .go { padding: 0 16px; border: 1px solid var(--border); border-left: 0; border-radius: 0 22px 22px 0; background: var(--panel2); }
   .icon-btn { background: none; border: 0; font-size: 20px; padding: 6px; }
+  .sites { display: flex; gap: 6px; overflow-x: auto; max-width: 1100px; margin: 0 auto; padding: 10px 0; scrollbar-width: none; }
+  .sites::-webkit-scrollbar { display: none; }
+  .site { flex: none; padding: 5px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--panel); font-size: 13px; }
+  .site.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 
   main { max-width: 1100px; margin: 0 auto; padding: 12px 16px calc(env(safe-area-inset-bottom) + 24px); }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
   .chip { padding: 6px 12px; border-radius: 16px; background: var(--panel2); border: 0; font-size: 14px; }
-  .status { color: var(--muted); padding: 12px 0; }
+  .status { color: var(--muted); padding: 8px 0 12px; font-size: 13px; }
   .status.err { color: var(--accent); }
+  .status b { color: var(--text); font-weight: 600; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
   .card { display: block; color: inherit; text-decoration: none; }
   .thumb { position: relative; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; background: var(--panel2); }
   .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .dur { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.8); color: #fff; font-size: 12px;
-    padding: 1px 5px; border-radius: 4px; }
+  .dur, .tag { position: absolute; background: rgba(0,0,0,.8); color: #fff; font-size: 12px; padding: 1px 6px; border-radius: 4px; }
+  .dur { right: 6px; bottom: 6px; }
+  .tag { left: 6px; top: 6px; font-weight: 600; }
   .live { background: var(--accent); }
-  .title { font-weight: 600; margin: 8px 0 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .title { font-weight: 600; margin: 8px 0 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
   .meta { color: var(--muted); font-size: 13px; }
   .more { display: block; margin: 20px auto; padding: 10px 24px; border-radius: 20px; border: 1px solid var(--border); background: var(--panel); }
 
@@ -59,11 +66,12 @@
   @media (min-width: 900px) { .watch { grid-template-columns: minmax(0, 1fr) 340px; } }
   .player { position: relative; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
   .player video, .player iframe { width: 100%; height: 100%; border: 0; display: block; background: #000; }
-  .player .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  .player .msg { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center;
     color: #ccc; text-align: center; padding: 20px; }
-  .vtitle { font-size: 18px; font-weight: 700; margin: 12px 0 6px; }
+  .player .msg button, .player .msg a { padding: 8px 14px; border-radius: 8px; border: 0; background: #fff; color: #000; text-decoration: none; }
+  .vtitle { font-size: 18px; font-weight: 700; margin: 12px 0 6px; overflow-wrap: anywhere; }
   .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
-  .controls select, .controls button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); }
+  .controls select, .controls button, .controls a { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); text-decoration: none; max-width: 100%; }
   .source { color: var(--muted); font-size: 12px; }
   .desc { white-space: pre-wrap; background: var(--panel); border-radius: 10px; padding: 12px; font-size: 14px;
     max-height: 120px; overflow: hidden; position: relative; cursor: pointer; overflow-wrap: anywhere; }
@@ -73,9 +81,10 @@
 
   /* Settings */
   dialog { border: 1px solid var(--border); border-radius: 14px; background: var(--panel); color: var(--text);
-    width: min(520px, calc(100vw - 32px)); padding: 16px; }
+    width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); padding: 16px; }
   dialog::backdrop { background: rgba(0,0,0,.6); }
-  dialog h2 { margin: 0 0 8px; font-size: 18px; }
+  dialog h2 { margin: 16px 0 8px; font-size: 17px; }
+  dialog h2:first-child { margin-top: 0; }
   .srv { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
   .srv span.u { flex: 1; overflow-wrap: anywhere; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
@@ -86,7 +95,8 @@
   .row input { flex: 1; min-width: 160px; }
   .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  label.tog { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+  label.tog { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+  .siteopts { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
   .small { color: var(--muted); font-size: 13px; }
 </style>
 </head>
@@ -95,25 +105,30 @@
   <div class="bar">
     <a class="logo" href="#/">▶ Tonton</a>
     <form id="sf">
-      <input id="q" type="search" placeholder="Search videos or paste a YouTube link" autocomplete="off" enterkeyhint="search">
+      <input id="q" type="search" placeholder="Search videos, or paste any video link" autocomplete="off" enterkeyhint="search">
       <button class="go" aria-label="Search">🔍</button>
     </form>
     <button class="icon-btn" id="setBtn" aria-label="Settings">⚙️</button>
   </div>
+  <div class="sites" id="sites"></div>
 </header>
 <main id="app"></main>
 
 <dialog id="settings">
-  <h2>Servers</h2>
-  <p class="small">Videos come from ad-free open-source servers (Invidious and Piped), not from YouTube's own player, so there are no ads. Public servers go up and down; if one fails the next one is tried automatically.</p>
+  <h2>Sites searched in “All”</h2>
+  <div class="siteopts" id="siteOpts"></div>
+  <h2>Playback</h2>
+  <label class="tog"><input type="checkbox" id="optHls"> Prefer HD stream (HLS) when offered</label>
+  <label class="tog"><input type="checkbox" id="optAuto"> Auto-play the next video</label>
+  <label class="tog"><input type="checkbox" id="optAds"> Allow a site's own player when no direct stream is possible (it may show ads)</label>
+  <h2>YouTube servers</h2>
+  <p class="small">YouTube videos come through ad-free open-source servers (Invidious and Piped), never YouTube's own player. Public servers go up and down; if one fails the next is tried automatically.</p>
   <div id="srvList"></div>
   <div class="row">
     <select id="newType"><option value="inv">Invidious</option><option value="piped">Piped API</option></select>
     <input id="newUrl" placeholder="https://your.server">
     <button class="btn" id="addSrv">Add</button>
   </div>
-  <label class="tog"><input type="checkbox" id="optHls"> Prefer HD stream (HLS) when the server offers it</label>
-  <label class="tog"><input type="checkbox" id="optAuto"> Auto-play the next related video</label>
   <div class="row">
     <button class="btn" id="testSrv">Test all</button>
     <button class="btn" id="resetSrv">Reset list</button>
@@ -126,8 +141,59 @@
 <script>
 "use strict";
 
-// ---------- Servers ----------
-// inv = Invidious (https://invidious.io), piped = Piped API (https://github.com/TeamPiped/Piped)
+// =====================================================================
+// Basics
+// =====================================================================
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const enc = encodeURIComponent;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("tonton." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("tonton." + k, JSON.stringify(v)); } catch {} },
+};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function stripHtml(h) { const d = document.createElement("div"); d.innerHTML = String(h || "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n"); return d.textContent.trim(); }
+const host = u => { try { return new URL(u).host; } catch { return u; } };
+const https = u => String(u || "").replace(/^http:\/\//, "https://");
+function dur(s) {
+  s = Math.round(+s);
+  if (!s || s < 0) return "";
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`;
+}
+function num(n) {
+  n = +n;
+  if (!isFinite(n) || n < 0) return "";
+  return n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n);
+}
+function ago(d) {
+  const t = typeof d === "number" ? d * 1000 : Date.parse(d);
+  if (!t) return "";
+  const s = (Date.now() - t) / 1000;
+  const u = [[31536000, "year"], [2592000, "month"], [604800, "week"], [86400, "day"], [3600, "hour"], [60, "minute"]];
+  for (const [n, w] of u) if (s >= n) { const k = Math.floor(s / n); return `${k} ${w}${k > 1 ? "s" : ""} ago`; }
+  return "just now";
+}
+const lenToSec = l => { if (!l) return 0; if (/:/.test(l)) return String(l).split(":").reduce((a, b) => a * 60 + +b, 0); return +l; };
+
+async function fetchJSON(url, ms = 10000, init = {}) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, Object.assign({ signal: ctl.signal, referrerPolicy: "no-referrer" }, init));
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    if (j && j.error && !j.result) throw new Error(typeof j.error === "string" ? j.error : "error");
+    return j;
+  } finally { clearTimeout(t); }
+}
+
+const opts = Object.assign({ hls: true, auto: false, ads: false, site: "all", off: [] }, store.get("opts", {}));
+const saveOpts = () => store.set("opts", opts);
+
+// =====================================================================
+// YouTube through Invidious / Piped servers
+// =====================================================================
 const DEFAULT_SERVERS = [
   { type: "inv",   url: "https://inv.nadeko.net" },
   { type: "inv",   url: "https://yewtu.be" },
@@ -142,210 +208,477 @@ const DEFAULT_SERVERS = [
   { type: "piped", url: "https://pipedapi.leptons.xyz" },
   { type: "piped", url: "https://pipedapi.reallyaweso.me" },
 ];
-
-const store = {
-  get(k, d) { try { const v = localStorage.getItem("tonton." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem("tonton." + k, JSON.stringify(v)); } catch {} },
-};
-
 let servers = store.get("servers", null) || DEFAULT_SERVERS.slice();
-let lastGood = store.get("lastGood", null);       // url of the last server that worked
-const health = {};                                 // url -> "ok" | "bad"
-const opts = Object.assign({ hls: true, auto: false }, store.get("opts", {}));
-
-const norm = u => u.trim().replace(/\/+$/, "");
+let lastGood = store.get("lastGood", null);
+const health = {};
 const saveServers = () => store.set("servers", servers);
-
+function markGood(s) { lastGood = s.url; store.set("lastGood", lastGood); }
 function ordered() {
-  // Last working server first, then ones not known to be broken, then the rest.
   const rank = s => (s.url === lastGood ? 0 : health[s.url] === "ok" ? 1 : health[s.url] === "bad" ? 3 : 2);
   return servers.slice().sort((a, b) => rank(a) - rank(b));
 }
-
-async function fetchJSON(url, ms = 9000) {
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), ms);
-  try {
-    const r = await fetch(url, { signal: ctl.signal, referrerPolicy: "no-referrer" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const j = await r.json();
-    if (j && j.error) throw new Error(j.error);
-    return j;
-  } finally { clearTimeout(t); }
-}
-
-// Try servers in small parallel batches; the first good answer wins.
+// Try servers in parallel batches of 3; the first good answer wins.
 async function tryServers(fn, skip) {
   let list = ordered();
   if (skip) list = list.filter(s => !skip.has(s.url));
-  const BATCH = 3;
-  for (let i = 0; i < list.length; i += BATCH) {
-    const batch = list.slice(i, i + BATCH);
+  for (let i = 0; i < list.length; i += 3) {
     try {
-      return await Promise.any(batch.map(async s => {
-        try {
-          const data = await fn(s);
-          health[s.url] = "ok";
-          return { server: s, data };
-        } catch (e) { health[s.url] = "bad"; throw e; }
+      return await Promise.any(list.slice(i, i + 3).map(async s => {
+        try { const data = await fn(s); health[s.url] = "ok"; return { server: s, data }; }
+        catch (e) { health[s.url] = "bad"; throw e; }
       }));
-    } catch { /* whole batch failed, next batch */ }
+    } catch {}
   }
-  throw new Error("No server answered. Open ⚙️ to test or add a server.");
+  throw new Error("No YouTube server answered");
 }
-function markGood(s) { lastGood = s.url; store.set("lastGood", lastGood); }
-
-// ---------- Normalised API ----------
 const ytThumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
-
-function fromInv(v) {
-  return { id: v.videoId, title: v.title, author: v.author, length: v.lengthSeconds,
-    views: v.viewCount, when: v.publishedText || "", live: !!v.liveNow };
-}
+const fromInv = v => ({ src: "yt", id: v.videoId, title: v.title, author: v.author, length: v.lengthSeconds,
+  views: v.viewCount, when: v.publishedText || "", live: !!v.liveNow, thumb: ytThumb(v.videoId) });
 function fromPiped(v) {
   const id = (v.url || "").split("v=")[1];
-  return { id, title: v.title, author: v.uploaderName || v.uploader, length: v.duration,
-    views: v.views, when: v.uploadedDate || "", live: v.duration === -1 || v.isLive };
+  return { src: "yt", id, title: v.title, author: v.uploaderName || v.uploader, length: v.duration,
+    views: v.views, when: v.uploadedDate || "", live: v.duration === -1 || v.isLive, thumb: ytThumb(id) };
 }
-
-async function searchOn(s, q, page) {
+async function ytSearchOn(s, q, page) {
   if (s.type === "inv") {
-    const j = await fetchJSON(`${s.url}/api/v1/search?q=${encodeURIComponent(q)}&type=video&page=${page || 1}`);
+    const j = await fetchJSON(`${s.url}/api/v1/search?q=${enc(q)}&type=video&page=${page || 1}`);
     if (!Array.isArray(j)) throw new Error("bad");
     return { items: j.filter(v => v.type === "video").map(fromInv), next: (page || 1) + 1 };
   }
-  const path = page ? `/nextpage/search?q=${encodeURIComponent(q)}&filter=videos&nextpage=${encodeURIComponent(page)}`
-                    : `/search?q=${encodeURIComponent(q)}&filter=videos`;
+  const path = page ? `/nextpage/search?q=${enc(q)}&filter=videos&nextpage=${enc(page)}` : `/search?q=${enc(q)}&filter=videos`;
   const j = await fetchJSON(s.url + path);
   if (!j || !Array.isArray(j.items)) throw new Error("bad");
-  return { items: j.items.filter(v => v.type === "stream" || (v.url || "").includes("v=")).map(fromPiped), next: j.nextpage || null };
+  return { items: j.items.filter(v => (v.url || "").includes("v=")).map(fromPiped), next: j.nextpage || null };
 }
-
-async function trendingOn(s) {
-  if (s.type === "inv") {
-    const j = await fetchJSON(`${s.url}/api/v1/popular`);
-    if (!Array.isArray(j) || !j.length) throw new Error("empty");
-    return j.map(fromInv);
-  }
-  const j = await fetchJSON(`${s.url}/trending?region=MY`);
-  if (!Array.isArray(j) || !j.length) throw new Error("empty");
-  return j.map(fromPiped);
-}
-
-// Returns { title, author, desc, views, sources: [{label, src, hls}], related: [...] }
-async function videoOn(s, id) {
-  const canHls = !!document.createElement("video").canPlayType("application/vnd.apple.mpegurl");
+async function ytVideoOn(s, id) {
   if (s.type === "inv") {
     const j = await fetchJSON(`${s.url}/api/v1/videos/${id}?local=true`, 12000);
     const sources = [];
-    if (j.hlsUrl && canHls) sources.push({ label: "Live", src: abs(s.url, j.hlsUrl), hls: true });
+    if (j.hlsUrl) sources.push({ label: "Live", src: j.hlsUrl.startsWith("/") ? s.url + j.hlsUrl : j.hlsUrl, hls: true });
     (j.formatStreams || []).slice().sort((a, b) => parseInt(b.qualityLabel || b.resolution) - parseInt(a.qualityLabel || a.resolution))
-      .forEach(f => sources.push({ label: f.qualityLabel || f.resolution || f.itag,
-        src: `${s.url}/latest_version?id=${id}&itag=${f.itag}&local=true` }));
+      .forEach(f => sources.push({ label: f.qualityLabel || f.resolution || f.itag, src: `${s.url}/latest_version?id=${id}&itag=${f.itag}&local=true` }));
     if (!sources.length) throw new Error("no streams");
     return { title: j.title, author: j.author, desc: j.description || "", views: j.viewCount, when: j.publishedText,
       sources, related: (j.recommendedVideos || []).map(fromInv) };
   }
   const j = await fetchJSON(`${s.url}/streams/${id}`, 12000);
   const sources = [];
-  if (j.hls && canHls) sources.push({ label: "HD (auto)", src: j.hls, hls: true });
+  if (j.hls) sources.push({ label: "HD (auto)", src: j.hls, hls: true });
   (j.videoStreams || []).filter(v => !v.videoOnly).sort((a, b) => parseInt(b.quality) - parseInt(a.quality))
     .forEach(v => sources.push({ label: v.quality, src: v.url }));
   if (!sources.length) throw new Error("no streams");
-  return { title: j.title, author: j.uploader, desc: stripHtml(j.description || ""), views: j.views, when: j.uploadDate,
+  return { title: j.title, author: j.uploader, desc: stripHtml(j.description), views: j.views, when: j.uploadDate,
     sources, related: (j.relatedStreams || []).filter(v => (v.url || "").includes("v=")).map(fromPiped) };
 }
-const abs = (base, u) => (u.startsWith("/") ? base + u : u);
 
-// ---------- Helpers ----------
-const $ = s => document.querySelector(s);
-const app = $("#app");
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-function stripHtml(h) { const d = document.createElement("div"); d.innerHTML = h.replace(/<br\s*\/?>/gi, "\n"); return d.textContent; }
-function dur(s) {
-  if (!s || s < 0) return "";
-  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
-  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`;
+// =====================================================================
+// Sites. Each one can search(q, cursor) -> {items, next} and resolve(id, ctx) -> video.
+// A video is { title, author, desc, views, when, sources:[{label, src, hls}], related,
+//              embed, embedAds }  — embed is used only if no direct stream plays.
+// =====================================================================
+const SITES = {
+  yt: {
+    name: "YouTube", color: "#e5484d",
+    async search(q, cur) {
+      if (!cur) {
+        const { server, data } = await tryServers(s => ytSearchOn(s, q));
+        markGood(server);
+        return { items: data.items, next: data.next && { server, page: data.next } };
+      }
+      const r = await ytSearchOn(cur.server, q, cur.page);
+      return { items: r.items, next: r.next && r.items.length ? { server: cur.server, page: r.next } : null };
+    },
+    async resolve(id, ctx) {
+      const inv = ordered().find(s => s.type === "inv" && !(ctx.skip || new Set()).has(s.url)) || ordered().find(s => s.type === "inv");
+      const embed = inv ? `${inv.url}/embed/${id}?autoplay=1` : null;
+      try {
+        const { server, data } = await tryServers(s => ytVideoOn(s, id), ctx.skip);
+        ctx.skip.add(server.url);
+        ctx.server = server;
+        return Object.assign(data, { via: host(server.url), embed, embedAds: false, retry: true });
+      } catch {
+        ctx.server = null;   // every server tried: fall back to the embed
+        return { title: "", sources: [], related: [], embed, embedAds: false, retry: true };
+      }
+    },
+    page: id => `https://www.youtube.com/watch?v=${id}`,
+  },
+
+  pt: {
+    // PeerTube: thousands of independent servers, searched together through Sepia Search.
+    name: "PeerTube", color: "#f1680d",
+    async search(q, cur) {
+      const start = cur || 0;
+      const j = await fetchJSON(`https://sepiasearch.org/api/v1/search/videos?search=${enc(q)}&start=${start}&count=20&sort=-match&nsfw=false`);
+      const items = (j.data || []).map(v => {
+        const h = host(v.url || "") || v.channel?.host || v.account?.host;
+        return { src: "pt", id: `${h}/${v.uuid}`, title: v.name, author: v.channel?.displayName || v.account?.displayName,
+          length: v.duration, views: v.views, when: ago(v.publishedAt), thumb: v.thumbnailUrl || v.previewUrl, live: v.isLive };
+      });
+      return { items, next: start + 20 < (j.total || 0) ? start + 20 : null };
+    },
+    async resolve(id) {
+      const [h, uuid] = splitOnce(id, "/");
+      const j = await fetchJSON(`https://${h}/api/v1/videos/${uuid}`);
+      const sources = [], seen = new Set();
+      const pl = (j.streamingPlaylists || [])[0];
+      if (pl?.playlistUrl) sources.push({ label: "HD (auto)", src: pl.playlistUrl, hls: true });
+      [...(j.files || []), ...(pl?.files || [])]
+        .filter(f => f.fileUrl && f.resolution?.id > 0)
+        .sort((a, b) => b.resolution.id - a.resolution.id)
+        .forEach(f => { if (!seen.has(f.resolution.id)) { seen.add(f.resolution.id); sources.push({ label: f.resolution.label, src: f.fileUrl }); } });
+      return { title: j.name, author: j.channel?.displayName || j.account?.displayName, desc: j.description || "",
+        views: j.views, when: ago(j.publishedAt), sources, related: [], via: h,
+        embed: `https://${h}/videos/embed/${uuid}?autoplay=1`, embedAds: false };
+    },
+    page: id => { const [h, u] = splitOnce(id, "/"); return `https://${h}/w/${u}`; },
+  },
+
+  ia: {
+    name: "Archive.org", color: "#428bca",
+    async search(q, cur) {
+      const page = cur || 1;
+      const query = enc(`(${q}) AND mediatype:(movies)`);
+      const j = await fetchJSON(`https://archive.org/advancedsearch.php?q=${query}&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=downloads&fl[]=date&rows=20&page=${page}&output=json`);
+      const r = j.response || {};
+      const items = (r.docs || []).map(d => ({ src: "ia", id: d.identifier, title: d.title || d.identifier,
+        author: [].concat(d.creator || [])[0] || "", views: d.downloads, when: d.date ? String(d.date).slice(0, 4) : "",
+        thumb: `https://archive.org/services/img/${d.identifier}` }));
+      return { items, next: page * 20 < (r.numFound || 0) ? page + 1 : null };
+    },
+    async resolve(id) {
+      const j = await fetchJSON(`https://archive.org/metadata/${enc(id)}`);
+      const m = j.metadata || {};
+      const rank = f => /h\.264|mpeg4/i.test(f.format) ? 0 : /\.mp4$/i.test(f.name) ? 1 : /\.webm$/i.test(f.name) ? 2 : 3;
+      const files = (j.files || []).filter(f => /\.(mp4|m4v|webm|ogv|mov)$/i.test(f.name));
+      // One entry per video in the item (an item can hold a whole series); best format of each.
+      const best = new Map();
+      for (const f of files) {
+        const key = (f.original || f.name).replace(/\.[^.]+$/, "");
+        const cur = best.get(key);
+        if (!cur || rank(f) < rank(cur)) best.set(key, f);
+      }
+      const list = [...best.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).slice(0, 80);
+      const sources = list.map(f => ({ label: list.length > 1 ? (f.title || f.name).replace(/\.[^.]+$/, "") : (f.height ? f.height + "p" : f.format || "Video"),
+        src: `https://archive.org/download/${enc(id)}/${f.name.split("/").map(enc).join("/")}` }));
+      return { title: m.title || id, author: [].concat(m.creator || [])[0] || "", desc: stripHtml([].concat(m.description || []).join("\n")),
+        when: m.date || "", sources, related: [], parts: list.length > 1,
+        embed: `https://archive.org/embed/${enc(id)}`, embedAds: false };
+    },
+    page: id => `https://archive.org/details/${id}`,
+  },
+
+  dm: {
+    name: "Dailymotion", color: "#0d66ff",
+    async search(q, cur) {
+      const page = cur || 1;
+      const j = await fetchJSON(`https://api.dailymotion.com/videos?search=${enc(q)}&fields=id,title,owner.screenname,duration,views_total,created_time,thumbnail_360_url&limit=20&page=${page}`);
+      const items = (j.list || []).map(v => ({ src: "dm", id: v.id, title: v.title, author: v["owner.screenname"], length: v.duration,
+        views: v.views_total, when: ago(v.created_time), thumb: v.thumbnail_360_url }));
+      return { items, next: j.has_more ? page + 1 : null };
+    },
+    async resolve(id) {
+      const info = await fetchJSON(`https://api.dailymotion.com/video/${id}?fields=title,owner.screenname,description,views_total,created_time`).catch(() => ({}));
+      const sources = [];
+      try {   // Direct HLS stream (works when Dailymotion allows it from this site)
+        const m = await fetchJSON(`https://www.dailymotion.com/player/metadata/video/${id}`, 8000);
+        const u = m.qualities?.auto?.[0]?.url;
+        if (u) sources.push({ label: "HD (auto)", src: u, hls: true });
+      } catch {}
+      return { title: info.title, author: info["owner.screenname"], desc: info.description || "", views: info.views_total,
+        when: ago(info.created_time), sources, related: [],
+        embed: `https://geo.dailymotion.com/player.html?video=${id}`, embedAds: true };
+    },
+    page: id => `https://www.dailymotion.com/video/${id}`,
+  },
+
+  od: {
+    name: "Odysee", color: "#e50054",
+    async search(q, cur) {
+      const from = cur || 0;
+      const hits = await fetchJSON(`https://lighthouse.odysee.tv/search?s=${enc(q)}&size=20&from=${from}&claimType=file&mediaType=video&free_only=true&nsfw=false`);
+      if (!Array.isArray(hits) || !hits.length) return { items: [], next: null };
+      const claims = await odResolve(hits.map(h => `lbry://${h.name}#${h.claimId}`));
+      const items = Object.values(claims).filter(c => c && c.claim_id && c.value?.source).map(odItem);
+      return { items, next: hits.length >= 20 ? from + 20 : null };
+    },
+    async resolve(id) {
+      const [claimId, name] = splitOnce(id, "/");
+      const c = Object.values(await odResolve([`lbry://${name}#${claimId}`]))[0];
+      if (!c || !c.value) throw new Error("not found");
+      const sd = c.value.source?.sd_hash || "";
+      const full = c.claim_id;
+      const sources = sd ? [
+        { label: "Stream", src: `https://player.odycdn.com/api/v3/streams/free/${enc(c.name)}/${full}/${sd.slice(0, 6)}` },
+        { label: "Stream (alt)", src: `https://player.odycdn.com/v6/streams/${full}/${sd}.mp4` },
+      ] : [];
+      const v = odItem(c);
+      return { title: v.title, author: v.author, desc: c.value.description || "", when: v.when, sources, related: [],
+        embed: `https://odysee.com/$/embed/${enc(c.name)}/${full}`, embedAds: true };
+    },
+    page: id => { const [c, n] = splitOnce(id, "/"); return `https://odysee.com/${n}:${c}`; },
+  },
+
+  wm: {
+    name: "Wikimedia", color: "#339966",
+    async search(q, cur) {
+      const off = cur || 0;
+      const j = await fetchJSON(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrsearch=${enc(q + " filetype:video")}&gsrlimit=20&gsroffset=${off}&prop=imageinfo&iiprop=url|size|user|timestamp&iiurlwidth=480`);
+      const pages = Object.values(j.query?.pages || {}).sort((a, b) => a.index - b.index);
+      const items = pages.map(p => {
+        const ii = (p.imageinfo || [])[0] || {};
+        const file = p.title.replace(/^File:/, "");
+        return { src: "wm", id: file, title: file.replace(/\.[^.]+$/, "").replace(/_/g, " "), author: ii.user,
+          length: ii.duration, when: ago(ii.timestamp), thumb: ii.thumburl };
+      });
+      return { items, next: j.continue?.gsroffset ?? null };
+    },
+    async resolve(id) {
+      const j = await fetchJSON(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&titles=${enc("File:" + id)}&prop=videoinfo&viprop=url|user|timestamp|derivatives|extmetadata`);
+      const p = Object.values(j.query?.pages || {})[0] || {};
+      const vi = (p.videoinfo || [])[0];
+      if (!vi) throw new Error("not found");
+      const sources = (vi.derivatives || [])
+        .filter(d => /^video/.test(d.type) && d.height)
+        .sort((a, b) => b.height - a.height || (/webm/.test(a.type) ? 1 : -1))
+        .map(d => ({ label: `${d.height}p ${/webm/.test(d.type) ? "WebM" : "MP4"}`, src: d.src }));
+      sources.push({ label: "Original", src: vi.url });
+      const md = vi.extmetadata || {};
+      return { title: id.replace(/\.[^.]+$/, "").replace(/_/g, " "), author: stripHtml(md.Artist?.value) || vi.user,
+        desc: stripHtml(md.ImageDescription?.value), when: ago(vi.timestamp), sources, related: [], embed: null };
+    },
+    page: id => `https://commons.wikimedia.org/wiki/File:${enc(id)}`,
+  },
+
+  nasa: {
+    name: "NASA", color: "#0b3d91",
+    async search(q, cur) {
+      const page = cur || 1;
+      const j = await fetchJSON(`https://images-api.nasa.gov/search?q=${enc(q)}&media_type=video&page=${page}`);
+      const c = j.collection || {};
+      const items = (c.items || []).map(nasaItem);
+      return { items, next: (c.links || []).some(l => l.rel === "next") ? page + 1 : null };
+    },
+    async resolve(id) {
+      const [a, s] = await Promise.all([
+        fetchJSON(`https://images-api.nasa.gov/asset/${enc(id)}`),
+        fetchJSON(`https://images-api.nasa.gov/search?nasa_id=${enc(id)}`).catch(() => ({})),
+      ]);
+      const order = ["~large", "~medium", "~orig", "~small", "~mobile", "~preview"];
+      const sources = (a.collection?.items || []).map(i => https(i.href)).filter(u => /\.mp4$/i.test(u))
+        .map(u => ({ u, r: order.findIndex(o => u.includes(o + ".")) }))
+        .sort((x, y) => (x.r < 0 ? 99 : x.r) - (y.r < 0 ? 99 : y.r))
+        .map(({ u, r }) => ({ label: r >= 0 ? order[r].slice(1) : u.split("/").pop(), src: u }));
+      const d = s.collection?.items?.[0]?.data?.[0] || {};
+      return { title: d.title || id, author: d.center ? "NASA " + d.center : "NASA", desc: d.description || "",
+        when: d.date_created ? d.date_created.slice(0, 10) : "", sources, related: [], embed: null };
+    },
+    page: id => `https://images.nasa.gov/details/${enc(id)}`,
+  },
+
+  // Not searchable, but pasted links play.
+  vimeo: {
+    name: "Vimeo", color: "#1ab7ea", noSearch: true,
+    async resolve(id) {
+      const o = await fetchJSON(`https://vimeo.com/api/oembed.json?url=${enc("https://vimeo.com/" + id)}`).catch(() => ({}));
+      return { title: o.title, author: o.author_name, desc: o.description || "", sources: [], related: [],
+        embed: `https://player.vimeo.com/video/${id}?autoplay=1`, embedAds: false };   // Vimeo's player has no ads
+    },
+    page: id => `https://vimeo.com/${id}`,
+  },
+  url: {
+    name: "Link", color: "#666", noSearch: true,
+    async resolve(id) {
+      const name = decodeURIComponent(id.split(/[?#]/)[0].split("/").pop() || id);
+      return { title: name, author: host(id), sources: [{ label: "Video", src: id, hls: /\.m3u8(\?|$)/i.test(id) }], related: [], embed: null };
+    },
+    page: id => id,
+  },
+};
+const SEARCHABLE = Object.keys(SITES).filter(k => !SITES[k].noSearch);
+
+function splitOnce(s, sep) { const i = s.indexOf(sep); return i < 0 ? [s, ""] : [s.slice(0, i), s.slice(i + 1)]; }
+async function odResolve(urls) {
+  const j = await fetchJSON("https://api.na-backend.odysee.com/api/v1/proxy?m=resolve", 10000, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "resolve", params: { urls } }),
+  });
+  return j.result || {};
 }
-function num(n) {
-  if (n == null || n < 0) return "";
-  return n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "K" : String(n);
+function odItem(c) {
+  const v = c.value || {};
+  return { src: "od", id: `${c.claim_id}/${c.name}`, title: v.title || c.name,
+    author: c.signing_channel?.value?.title || c.signing_channel?.name || "", length: v.video?.duration,
+    when: ago(c.timestamp || v.release_time), thumb: v.thumbnail?.url };
 }
-function ytId(text) {
-  const m = text.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);
-  return m ? m[1] : null;
+function nasaItem(i) {
+  const d = (i.data || [])[0] || {};
+  return { src: "nasa", id: d.nasa_id, title: d.title, author: d.center ? "NASA " + d.center : "NASA",
+    when: d.date_created ? d.date_created.slice(0, 10) : "", thumb: https((i.links || [])[0]?.href) };
 }
-function card(v) {
+
+// A pasted link -> [site, id], or null if it isn't a link.
+function parseLink(text) {
+  let u;
+  try { u = new URL(text.trim()); } catch { return null; }
+  if (!/^https?:$/.test(u.protocol)) return null;
+  const h = u.hostname.replace(/^(www|m|music)\./, ""), p = u.pathname;
+  let m;
+  if (/(^|\.)youtube\.com$|^youtu\.be$|youtube-nocookie\.com$/.test(h)) {
+    const id = u.searchParams.get("v") || (p.match(/^\/(?:shorts\/|embed\/|live\/|v\/)?([\w-]{11})/) || [])[1];
+    if (id) return ["yt", id];
+  }
+  if (h === "vimeo.com" || h === "player.vimeo.com") { if ((m = p.match(/(\d{5,})/))) return ["vimeo", m[1]]; }
+  if (h === "dailymotion.com" && (m = p.match(/\/video\/([a-z0-9]+)/i))) return ["dm", m[1]];
+  if (h === "dai.ly" && (m = p.match(/^\/([a-z0-9]+)/i))) return ["dm", m[1]];
+  if (h === "archive.org" && (m = p.match(/^\/(?:details|embed)\/([^/?#]+)/))) return ["ia", decodeURIComponent(m[1])];
+  if (h === "odysee.com" && (m = p.match(/\/([^/@][^/]*?)[:#]([0-9a-f]+)\/?$/i))) return ["od", `${m[2]}/${decodeURIComponent(m[1])}`];
+  if (h === "commons.wikimedia.org" && (m = p.match(/\/wiki\/File:(.+)$/))) return ["wm", decodeURIComponent(m[1])];
+  if (h === "images.nasa.gov" && (m = p.match(/\/details\/([^/?#]+)/))) return ["nasa", decodeURIComponent(m[1])];
+  if ((m = p.match(/\/(?:videos\/watch|videos\/embed|w)\/([\w-]{8,})/))) return ["pt", `${u.host}/${m[1]}`];   // any PeerTube server
+  return ["url", u.href];   // anything else: try it as a direct video file / stream
+}
+const watchHref = v => `#/watch/${v.src}/${enc(v.id)}`;
+
+// =====================================================================
+// UI pieces
+// =====================================================================
+function card(v, showSite) {
+  const site = SITES[v.src] || SITES.yt;
   const badge = v.live ? `<span class="dur live">LIVE</span>` : v.length ? `<span class="dur">${dur(v.length)}</span>` : "";
-  const meta = [v.author, v.views != null && v.views >= 0 ? num(v.views) + " views" : "", v.when].filter(Boolean).map(esc).join(" · ");
-  return `<a class="card" href="#/watch/${v.id}">
-    <div class="thumb"><img loading="lazy" src="${ytThumb(v.id)}" alt="">${badge}</div>
+  const tag = showSite ? `<span class="tag" style="background:${site.color}">${esc(site.name)}</span>` : "";
+  const meta = [v.author, num(v.views) ? num(v.views) + " views" : "", v.when].filter(Boolean).map(esc).join(" · ");
+  const thumb = v.thumb || (v.src === "yt" ? ytThumb(v.id) : "");
+  return `<a class="card" href="${watchHref(v)}">
+    <div class="thumb">${thumb ? `<img loading="lazy" src="${esc(thumb)}" alt="" onerror="this.remove()">` : ""}${badge}${tag}</div>
     <div><div class="title">${esc(v.title)}</div><div class="meta">${meta}</div></div></a>`;
 }
-
-// ---------- History ----------
-const pushHist = (k, item, key, max) => {
-  const list = store.get(k, []).filter(x => (key ? x[key] !== item[key] : x !== item));
+const pushHist = (k, item, same, max) => {
+  const list = store.get(k, []).filter(x => !same(x));
   list.unshift(item); store.set(k, list.slice(0, max));
 };
 
-// ---------- Pages ----------
+function drawSites() {
+  const list = [["all", "All sites"], ...SEARCHABLE.map(k => [k, SITES[k].name])];
+  $("#sites").innerHTML = list.map(([k, n]) => `<button class="site ${opts.site === k ? "on" : ""}" data-site="${k}">${esc(n)}</button>`).join("");
+}
+$("#sites").addEventListener("click", e => {
+  const b = e.target.closest("[data-site]");
+  if (!b) return;
+  opts.site = b.dataset.site; saveOpts(); drawSites();
+  const q = $("#q").value.trim();
+  if (q && !parseLink(q)) location.hash = `#/search/${opts.site}/${enc(q)}`;
+});
+
+// =====================================================================
+// Pages
+// =====================================================================
 let renderToken = 0;
+let hlsInst = null;
+function cleanup() { renderToken++; if (hlsInst) { hlsInst.destroy(); hlsInst = null; } }
 
 async function pageHome() {
-  const tok = ++renderToken;
+  const tok = renderToken;
   $("#q").value = "";
   const recent = store.get("searches", []);
-  const watched = store.get("watched", []);
+  const watched = store.get("watched", []).map(w => (w.src ? w : Object.assign({ src: "yt" }, w)));
   app.innerHTML = `
     ${recent.length ? `<div class="chips">${recent.map(q => `<button class="chip" data-q="${esc(q)}">🕘 ${esc(q)}</button>`).join("")}</div>` : ""}
-    ${watched.length ? `<h3>Continue watching</h3><div class="grid">${watched.slice(0, 8).map(card).join("")}</div>` : ""}
-    <h3>Popular</h3><div id="pop" class="status">Loading…</div>`;
+    ${watched.length ? `<h3>Continue watching</h3><div class="grid">${watched.slice(0, 8).map(v => card(v, true)).join("")}</div>` : ""}
+    <h3>Popular on YouTube</h3><div id="pop" class="status">Loading…</div>
+    <p class="small">Tip: you can paste a link from YouTube, Vimeo, Dailymotion, Archive.org, Odysee, PeerTube, Wikimedia Commons, NASA, or a direct .mp4 / .webm / .m3u8 link.</p>`;
   try {
-    const { server, data } = await tryServers(s => trendingOn(s));
+    const { server, data } = await tryServers(async s => {
+      if (s.type === "inv") { const j = await fetchJSON(`${s.url}/api/v1/popular`); if (!j.length) throw 0; return j.map(fromInv); }
+      const j = await fetchJSON(`${s.url}/trending?region=MY`); if (!j.length) throw 0; return j.map(fromPiped);
+    });
     if (tok !== renderToken) return;
     markGood(server);
-    $("#pop").outerHTML = `<div class="grid">${data.slice(0, 24).map(card).join("")}</div>`;
-  } catch (e) {
-    if (tok !== renderToken) return;
-    $("#pop").textContent = "Search for something above to start.";
+    $("#pop").outerHTML = `<div class="grid">${data.slice(0, 24).map(v => card(v)).join("")}</div>`;
+  } catch {
+    if (tok === renderToken) $("#pop").textContent = "Search for something above to start.";
   }
 }
 
-async function pageSearch(q) {
-  const tok = ++renderToken;
+async function pageSearch(site, q) {
+  const tok = renderToken;
   $("#q").value = q;
-  pushHist("searches", q, null, 8);
-  app.innerHTML = `<div class="status">Searching “${esc(q)}”…</div>`;
-  let server, res;
-  try {
-    ({ server, data: res } = await tryServers(s => searchOn(s, q)));
-  } catch (e) {
-    if (tok === renderToken) app.innerHTML = `<div class="status err">${esc(e.message)}</div>`;
-    return;
-  }
+  if (opts.site !== site) { opts.site = site; saveOpts(); drawSites(); }
+  pushHist("searches", q, x => x === q, 8);
+  const keys = site === "all" ? SEARCHABLE.filter(k => !opts.off.includes(k)) : [site];
+  const multi = keys.length > 1;
+  const st = Object.fromEntries(keys.map(k => [k, { items: [], next: null, state: "loading" }]));
+  const seen = new Set();
+  let shown = 0;   // how many merged items are already on screen
+
+  app.innerHTML = `<div class="status" id="sstat"></div><div class="grid" id="res"></div><button class="more" id="more" hidden>Load more</button>`;
+  const status = () => {
+    $("#sstat").innerHTML = keys.map(k => {
+      const s = st[k];
+      const n = s.state === "loading" ? "…" : s.state === "err" ? "✕" : s.items.length;
+      return `${esc(SITES[k].name)} <b>${n}</b>`;
+    }).join(" · ");
+    const loading = keys.some(k => st[k].state === "loading");
+    const total = keys.reduce((a, k) => a + st[k].items.length, 0);
+    if (!loading && !total) $("#res").innerHTML = `<div class="status">No videos found.</div>`;
+    $("#more").hidden = loading || !keys.some(k => st[k].next != null);
+  };
+  // Merge the sites round-robin so "All" shows a mix, not one site after another.
+  const merged = () => {
+    const out = [], lists = keys.map(k => st[k].items);
+    for (let i = 0; lists.some(l => i < l.length); i++) for (const l of lists) if (i < l.length) out.push(l[i]);
+    return out;
+  };
+  const add = (k, r) => {
+    const fresh = r.items.filter(v => v.id && !seen.has(v.src + v.id));
+    fresh.forEach(v => seen.add(v.src + v.id));
+    st[k].items.push(...fresh); st[k].next = r.next; st[k].state = "ok";
+  };
+  const run = (k, cursor) => SITES[k].search(q, cursor).then(r => {
+    if (tok !== renderToken) return;
+    add(k, r);
+  }).catch(() => { if (tok === renderToken) { st[k].state = st[k].items.length ? "ok" : "err"; st[k].next = null; } });
+
+  // First page: redraw as each site answers.
+  await Promise.all(keys.map(k => run(k).then(() => {
+    if (tok !== renderToken) return;
+    const all = merged();
+    $("#res").innerHTML = all.map(v => card(v, multi)).join("");
+    shown = all.length;
+    status();
+  })));
   if (tok !== renderToken) return;
-  markGood(server);
-  if (!res.items.length) { app.innerHTML = `<div class="status">No videos found.</div>`; return; }
-  app.innerHTML = `<div class="grid" id="res">${res.items.map(card).join("")}</div>
-    <button class="more" id="more">Load more</button>`;
-  let next = res.next;
-  const seen = new Set(res.items.map(v => v.id));
+  status();
+
   $("#more").onclick = async () => {
     const b = $("#more"); b.disabled = true; b.textContent = "Loading…";
-    try {
-      const r = await searchOn(server, q, next);
-      next = r.next;
-      const fresh = r.items.filter(v => !seen.has(v.id)); fresh.forEach(v => seen.add(v.id));
-      $("#res").insertAdjacentHTML("beforeend", fresh.map(card).join(""));
-      b.textContent = "Load more"; b.disabled = false;
-      if (!next || !r.items.length) b.remove();
-    } catch { b.textContent = "Couldn't load more — tap to retry"; b.disabled = false; }
+    const before = Object.fromEntries(keys.map(k => [k, st[k].items.length]));
+    await Promise.all(keys.filter(k => st[k].next != null).map(k => run(k, st[k].next)));
+    if (tok !== renderToken) return;
+    // Append only the new items, mixed.
+    const lists = keys.map(k => st[k].items.slice(before[k]));
+    const out = [];
+    for (let i = 0; lists.some(l => i < l.length); i++) for (const l of lists) if (i < l.length) out.push(l[i]);
+    $("#res").insertAdjacentHTML("beforeend", out.map(v => card(v, multi)).join(""));
+    shown += out.length;
+    b.disabled = false; b.textContent = out.length ? "Load more" : "Nothing more — tap to retry";
+    status();
   };
 }
 
-async function pageWatch(id) {
-  const tok = ++renderToken;
+function loadHlsJs() {
+  if (window.Hls) return Promise.resolve(window.Hls);
+  return new Promise((ok, bad) => {
+    const s = document.createElement("script");
+    s.src = "hls.min.js"; s.onload = () => ok(window.Hls); s.onerror = bad;
+    document.head.appendChild(s);
+  });
+}
+
+async function pageWatch(src, id) {
+  const tok = renderToken;
+  const site = SITES[src];
+  if (!site) return pageHome();
   app.innerHTML = `<div class="watch">
     <div>
       <div class="player" id="player"><div class="msg">Finding an ad-free stream…</div></div>
@@ -357,97 +690,116 @@ async function pageWatch(id) {
     <div class="related" id="rel"></div>
   </div>`;
   window.scrollTo(0, 0);
+  const ctx = { skip: new Set() };
+  const msg = html => { if (tok === renderToken) $("#player").innerHTML = `<div class="msg">${html}</div>`; };
+  const original = `<a href="${esc(site.page(id))}" target="_blank" rel="noopener noreferrer">↗ Open on ${esc(site.name === "Link" ? host(id) : site.name)}</a>`;
 
-  // Try every server until one gives a stream the browser can actually play.
-  const tried = new Set();
   const attempt = async () => {
-    let got;
-    try {
-      got = await tryServers(s => videoOn(s, id), tried);
-    } catch {
-      return embedFallback();
-    }
+    let v;
+    try { v = await site.resolve(id, ctx); }
+    catch { return msg(`Couldn't load this video.${original}`); }
     if (tok !== renderToken) return;
-    tried.add(got.server.url);
-    show(got.server, got.data);
+    show(v);
   };
 
-  const embedFallback = () => {
+  const showEmbed = v => {
     if (tok !== renderToken) return;
-    const inv = ordered().find(s => s.type === "inv");
-    const p = $("#player");
-    p.innerHTML = inv
-      ? `<iframe src="${inv.url}/embed/${id}?autoplay=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`
-      : `<div class="msg">No server could play this video.</div>`;
-    $("#ctl").innerHTML = `<span class="source">Playing through ${esc(inv ? host(inv.url) : "")} embed</span>
-      <button id="retry">Retry streams</button>`;
-    $("#retry").onclick = () => { tried.clear(); attempt(); };
+    if (!v.embed) return msg(`This video couldn't be played here.${original}`);
+    const go = () => {
+      $("#player").innerHTML = `<iframe src="${esc(v.embed)}" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+      $("#via").textContent = v.embedAds ? `${site.name}'s own player (may show ads)` : `${site.name} player · no ads`;
+    };
+    if (v.embedAds && !opts.ads) {
+      msg(`${esc(site.name)} doesn't allow a direct, ad-free stream for this video.
+        <button id="anyway">Play in ${esc(site.name)}'s player (may show ads)</button>${original}`);
+      $("#anyway").onclick = go;
+    } else go();
   };
 
-  const show = (server, v) => {
-    $("#vt").textContent = v.title;
-    $("#vm").textContent = [v.author, v.views ? num(v.views) + " views" : "", v.when].filter(Boolean).join(" · ");
-    document.title = v.title + " · Tonton";
-    pushHist("watched", { id, title: v.title, author: v.author }, "id", 30);
+  const show = v => {
+    if (v.title) { $("#vt").textContent = v.title; document.title = v.title + " · Tonton"; }
+    $("#vm").textContent = [v.author, num(v.views) ? num(v.views) + " views" : "", v.when].filter(Boolean).join(" · ");
+    if (v.title) pushHist("watched", { src, id, title: v.title, author: v.author, thumb: v.thumb || (store.get("watched", []).find(w => w.src === src && w.id === id) || {}).thumb || thumbFor(src, id) },
+      x => (x.src || "yt") === src && x.id === id, 30);
+    if (v.desc) { const d = $("#desc"); d.hidden = false; d.textContent = stripHtml(v.desc); d.onclick = () => d.classList.toggle("open"); }
+    $("#rel").innerHTML = v.related?.length ? `<h3 style="margin-top:0">Up next</h3>` + v.related.slice(0, 20).map(x => card(x)).join("") : "";
 
-    if (v.desc) {
-      const d = $("#desc"); d.hidden = false; d.textContent = v.desc;
-      d.onclick = () => d.classList.toggle("open");
-    }
-    $("#rel").innerHTML = v.related.length ? `<h3 style="margin-top:0">Up next</h3>` + v.related.slice(0, 20).map(card).join("") : "";
+    let srcs = v.sources || [];
+    if (!opts.hls && !v.parts) srcs = srcs.filter(x => !x.hls).concat(srcs.filter(x => x.hls));
+    $("#ctl").innerHTML = `
+      ${srcs.length > 1 ? `<select id="qual" aria-label="${v.parts ? "Part" : "Quality"}">${srcs.map((x, i) => `<option value="${i}">${esc(x.label)}</option>`).join("")}</select>` : ""}
+      ${srcs.length ? `<button id="pip">⧉ Mini</button>` : ""}
+      <button id="share">🔗 Share</button>
+      ${original}
+      ${v.retry ? `<button id="other">↻ Other server</button>` : ""}
+      <span class="source" id="via">${srcs.length ? `via ${esc(v.via || host(srcs[0].src))} · no ads` : ""}</span>`;
+    $("#share").onclick = async () => {
+      try { if (navigator.share) await navigator.share({ title: v.title || "Video", url: location.href }); else { await navigator.clipboard.writeText(location.href); $("#share").textContent = "✓ Copied"; } } catch {}
+    };
+    if ($("#other")) $("#other").onclick = () => { cleanupHls(); msg("Trying another server…"); attempt(); };
+    if (!srcs.length) return v.retry && ctx.server ? attempt() : showEmbed(v);
 
-    let srcs = v.sources;
-    if (!opts.hls) srcs = srcs.filter(x => !x.hls).concat(srcs.filter(x => x.hls));
     $("#player").innerHTML = `<video id="vid" controls autoplay playsinline preload="auto"></video>`;
     const vid = $("#vid");
-    $("#ctl").innerHTML = `<select id="qual">${srcs.map((x, i) => `<option value="${i}">${esc(x.label)}</option>`).join("")}</select>
-      <button id="pip">⧉ Mini</button>
-      <button id="share">🔗 Share</button>
-      <button id="other">↻ Other server</button>
-      <span class="source">via ${esc(host(server.url))} · no ads</span>`;
-
     let idx = 0, started = false;
-    const load = (i, keepTime) => {
+    const fail = () => {
+      if (tok !== renderToken) return;
+      if (!started && !v.parts && idx + 1 < srcs.length) return load(idx + 1);      // try the next quality
+      if (v.parts && started) return;                                             // one bad part; others can still be picked
+      cleanupHls();
+      if (v.retry) { if (ctx.server) health[ctx.server.url] = "bad"; msg("Stream failed, trying another server…"); return attempt(); }
+      showEmbed(v);
+    };
+    const load = async (i, keepTime) => {
       const t = keepTime ? vid.currentTime : 0;
-      idx = i; $("#qual").value = i;
-      vid.src = srcs[i].src;
+      idx = i; if ($("#qual")) $("#qual").value = i;
+      cleanupHls();
+      const s = srcs[i];
+      if (s.hls && !vid.canPlayType("application/vnd.apple.mpegurl")) {
+        try {
+          const Hls = await loadHlsJs();
+          if (!Hls.isSupported()) throw 0;
+          hlsInst = new Hls();
+          hlsInst.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) fail(); });
+          hlsInst.loadSource(s.src); hlsInst.attachMedia(vid);
+        } catch { return fail(); }
+      } else {
+        vid.src = s.src;
+      }
       vid.addEventListener("loadedmetadata", () => { if (t) vid.currentTime = t; }, { once: true });
       vid.play().catch(() => {});
     };
-    vid.addEventListener("playing", () => { started = true; markGood(server); });
-    vid.addEventListener("error", () => {
-      if (tok !== renderToken) return;
-      if (idx + 1 < srcs.length && !started) load(idx + 1);          // next quality on same server
-      else { health[server.url] = "bad"; $("#player").innerHTML = `<div class="msg">Stream failed, trying another server…</div>`; attempt(); }
-    });
+    vid.addEventListener("playing", () => { started = true; if (ctx.server) markGood(ctx.server); });
+    vid.addEventListener("error", fail);
     vid.addEventListener("ended", () => {
-      if (opts.auto && v.related[0]) location.hash = "#/watch/" + v.related[0].id;
+      if (v.parts && idx + 1 < srcs.length) return load(idx + 1);
+      if (opts.auto && v.related?.[0]) location.hash = watchHref(v.related[0]);
     });
-    $("#qual").onchange = e => load(+e.target.value, true);
+    if ($("#qual")) $("#qual").onchange = e => { started = v.parts ? false : started; load(+e.target.value, !v.parts); };
     $("#pip").onclick = () => {
       if (document.pictureInPictureElement) document.exitPictureInPicture();
       else if (vid.requestPictureInPicture) vid.requestPictureInPicture().catch(() => {});
       else if (vid.webkitSetPresentationMode) vid.webkitSetPresentationMode("picture-in-picture");
     };
-    $("#share").onclick = async () => {
-      const url = location.href;
-      try { if (navigator.share) await navigator.share({ title: v.title, url }); else { await navigator.clipboard.writeText(url); $("#share").textContent = "✓ Copied"; } } catch {}
-    };
-    $("#other").onclick = () => { $("#player").innerHTML = `<div class="msg">Trying another server…</div>`; attempt(); };
     load(0);
   };
-
   attempt();
 }
-const host = u => { try { return new URL(u).host; } catch { return u; } };
+function cleanupHls() { if (hlsInst) { hlsInst.destroy(); hlsInst = null; } }
+const thumbFor = (src, id) => src === "yt" ? ytThumb(id) : src === "ia" ? `https://archive.org/services/img/${id}` : "";
 
-// ---------- Router ----------
+// =====================================================================
+// Router
+// =====================================================================
 function route() {
-  const h = decodeURIComponent(location.hash.slice(1));
+  cleanup();
+  const h = location.hash.slice(1);
   document.title = "Tonton";
   let m;
-  if ((m = h.match(/^\/watch\/([\w-]{11})/))) return pageWatch(m[1]);
-  if ((m = h.match(/^\/search\/(.+)/))) return pageSearch(m[1]);
+  if ((m = h.match(/^\/watch\/([a-z]+)\/(.+)$/))) return pageWatch(m[1], decodeURIComponent(m[2]));
+  if ((m = h.match(/^\/watch\/([\w-]{11})$/))) return pageWatch("yt", m[1]);           // old links
+  if ((m = h.match(/^\/search\/([a-z]+)\/(.+)$/)) && (m[1] === "all" || SITES[m[1]])) return pageSearch(m[1], decodeURIComponent(m[2]));
+  if ((m = h.match(/^\/search\/(.+)$/))) return pageSearch("all", decodeURIComponent(m[1]));
   pageHome();
 }
 window.addEventListener("hashchange", route);
@@ -457,15 +809,17 @@ $("#sf").addEventListener("submit", e => {
   const q = $("#q").value.trim();
   if (!q) return;
   $("#q").blur();
-  const id = ytId(q);
-  location.hash = id ? "#/watch/" + id : "#/search/" + encodeURIComponent(q);
+  const link = parseLink(q);
+  location.hash = link ? `#/watch/${link[0]}/${enc(link[1])}` : `#/search/${opts.site}/${enc(q)}`;
 });
 app.addEventListener("click", e => {
   const c = e.target.closest("[data-q]");
-  if (c) location.hash = "#/search/" + encodeURIComponent(c.dataset.q);
+  if (c) location.hash = `#/search/${opts.site}/${enc(c.dataset.q)}`;
 });
 
-// ---------- Settings ----------
+// =====================================================================
+// Settings
+// =====================================================================
 const dlg = $("#settings");
 function drawServers() {
   $("#srvList").innerHTML = servers.map((s, i) => `<div class="srv">
@@ -473,14 +827,26 @@ function drawServers() {
     <span class="u">${esc(host(s.url))} <span class="small">${s.type === "inv" ? "Invidious" : "Piped"}${s.url === lastGood ? " · in use" : ""}</span></span>
     <button data-del="${i}" aria-label="Remove">✕</button></div>`).join("");
 }
-$("#setBtn").onclick = () => { $("#optHls").checked = opts.hls; $("#optAuto").checked = opts.auto; drawServers(); dlg.showModal(); };
+function drawSiteOpts() {
+  $("#siteOpts").innerHTML = SEARCHABLE.map(k => `<label class="tog"><input type="checkbox" data-k="${k}" ${opts.off.includes(k) ? "" : "checked"}> ${esc(SITES[k].name)}</label>`).join("");
+}
+$("#siteOpts").onchange = e => {
+  const k = e.target.dataset.k;
+  opts.off = opts.off.filter(x => x !== k);
+  if (!e.target.checked) opts.off.push(k);
+  saveOpts();
+};
+$("#setBtn").onclick = () => {
+  $("#optHls").checked = opts.hls; $("#optAuto").checked = opts.auto; $("#optAds").checked = opts.ads;
+  drawSiteOpts(); drawServers(); dlg.showModal();
+};
 $("#closeSet").onclick = () => dlg.close();
 $("#srvList").onclick = e => {
   const b = e.target.closest("[data-del]");
   if (b) { servers.splice(+b.dataset.del, 1); saveServers(); drawServers(); }
 };
 $("#addSrv").onclick = () => {
-  let u = norm($("#newUrl").value);
+  let u = $("#newUrl").value.trim().replace(/\/+$/, "");
   if (!u) return;
   if (!/^https?:\/\//.test(u)) u = "https://" + u;
   servers = servers.filter(s => s.url !== u);
@@ -492,14 +858,16 @@ $("#clearHist").onclick = () => { store.set("searches", []); store.set("watched"
 $("#testSrv").onclick = async () => {
   const b = $("#testSrv"); b.disabled = true; b.textContent = "Testing…";
   await Promise.all(servers.map(async s => {
-    try { await searchOn(s, "music"); health[s.url] = "ok"; } catch { health[s.url] = "bad"; }
+    try { await ytSearchOn(s, "music"); health[s.url] = "ok"; } catch { health[s.url] = "bad"; }
     drawServers();
   }));
   b.disabled = false; b.textContent = "Test all";
 };
-$("#optHls").onchange = e => { opts.hls = e.target.checked; store.set("opts", opts); };
-$("#optAuto").onchange = e => { opts.auto = e.target.checked; store.set("opts", opts); };
+$("#optHls").onchange = e => { opts.hls = e.target.checked; saveOpts(); };
+$("#optAuto").onchange = e => { opts.auto = e.target.checked; saveOpts(); };
+$("#optAds").onchange = e => { opts.ads = e.target.checked; saveOpts(); };
 
+drawSites();
 route();
 </script>
 </body>
