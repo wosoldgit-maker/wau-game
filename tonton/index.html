@@ -210,6 +210,26 @@ const DEFAULT_SERVERS = [
   { type: "piped", url: "https://pipedapi.reallyaweso.me" },
 ];
 let servers = store.get("servers", null) || DEFAULT_SERVERS.slice();
+
+// Public servers change often, so also pull the current lists of working ones
+// (cached for 6 hours) and add them after the built-in list.
+async function discoverServers() {
+  let found = store.get("found", null);
+  if (!found || Date.now() - found.at > 6 * 3600e3) {
+    const list = [];
+    const timeout = p => Promise.race([p, new Promise((_, no) => setTimeout(no, 4000))]);
+    await Promise.allSettled([
+      timeout(fetchJSON("https://api.invidious.io/instances.json?sort_by=health", 4000)).then(j => j.forEach(([, i]) => {
+        if (i && i.type === "https" && i.api === true && i.cors === true && i.uri) list.push({ type: "inv", url: i.uri.replace(/\/+$/, "") });
+      })),
+      timeout(fetchJSON("https://piped-instances.kavin.rocks/", 4000)).then(j => j.forEach(i => {
+        if (i && i.api_url && i.up_to_date !== false) list.push({ type: "piped", url: i.api_url.replace(/\/+$/, "") });
+      })),
+    ]);
+    if (list.length) { found = { at: Date.now(), list }; store.set("found", found); }
+  }
+  if (found) for (const s of found.list) if (!servers.some(x => x.url === s.url)) servers.push(s);
+}
 let lastGood = store.get("lastGood", null);
 const health = {};
 const saveServers = () => store.set("servers", servers);
@@ -222,9 +242,9 @@ function ordered() {
 async function tryServers(fn, skip) {
   let list = ordered();
   if (skip) list = list.filter(s => !skip.has(s.url));
-  for (let i = 0; i < list.length; i += 3) {
+  for (let i = 0; i < list.length; i += 5) {
     try {
-      return await Promise.any(list.slice(i, i + 3).map(async s => {
+      return await Promise.any(list.slice(i, i + 5).map(async s => {
         try { const data = await fn(s); health[s.url] = "ok"; return { server: s, data }; }
         catch (e) { health[s.url] = "bad"; throw e; }
       }));
@@ -290,16 +310,17 @@ const SITES = {
       return { items: r.items, next: r.next && r.items.length ? { server: cur.server, page: r.next } : null };
     },
     async resolve(id, ctx) {
-      const inv = ordered().find(s => s.type === "inv" && !(ctx.skip || new Set()).has(s.url)) || ordered().find(s => s.type === "inv");
-      const embed = inv ? `${inv.url}/embed/${id}?autoplay=1` : null;
+      // Last resort when no ad-free server works: YouTube's own (privacy-mode) player, which may show ads.
+      const embed = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
       try {
         const { server, data } = await tryServers(s => ytVideoOn(s, id), ctx.skip);
         ctx.skip.add(server.url);
         ctx.server = server;
-        return Object.assign(data, { via: host(server.url), embed, embedAds: false, retry: true });
+        return Object.assign(data, { via: host(server.url), embed, embedAds: true, retry: true });
       } catch {
-        ctx.server = null;   // every server tried: fall back to the embed
-        return { title: "", sources: [], related: [], embed, embedAds: false, retry: true };
+        ctx.server = null;
+        const o = await fetchJSON(`https://www.youtube.com/oembed?format=json&url=${enc("https://www.youtube.com/watch?v=" + id)}`, 6000).catch(() => ({}));
+        return { title: o.title || "", author: o.author_name, sources: [], related: [], embed, embedAds: true, retry: true, siteName: "YouTube" };
       }
     },
     page: id => `https://www.youtube.com/watch?v=${id}`,
@@ -711,7 +732,7 @@ async function pageWatch(src, id) {
       $("#via").textContent = v.embedAds ? `${site.name}'s own player (may show ads)` : `${site.name} player · no ads`;
     };
     if (v.embedAds && !opts.ads) {
-      msg(`${esc(site.name)} doesn't allow a direct, ad-free stream for this video.
+      msg(`${src === "yt" ? "None of the ad-free YouTube servers can play this video right now." : esc(site.name) + " doesn't allow a direct, ad-free stream for this video."}
         <button id="anyway">Play in ${esc(site.name)}'s player (may show ads)</button>${original}`);
       $("#anyway").onclick = go;
     } else go();
@@ -870,7 +891,7 @@ $("#optAds").onchange = e => { opts.ads = e.target.checked; saveOpts(); };
 $("#optSafe").onchange = e => { opts.safe = e.target.checked; saveOpts(); };
 
 drawSites();
-route();
+discoverServers().finally(route);
 </script>
 </body>
 </html>
