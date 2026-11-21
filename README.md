@@ -148,3 +148,27 @@ An ad-free video search and player in `tonton/`. It searches many video sites at
 Public servers come and go and some sites block requests from other websites. A site that fails shows ✕ in the counts above the results, and the other sites still work. For YouTube you can add a working server from https://api.invidious.io in ⚙️.
 
 Play it at `/tonton/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/tonton/
+
+---
+
+# Jom Darab
+
+A multiplication visualizer for kids in `darab/index.html`. It shows what "3 × 4" means with pictures, then counts it out loud.
+
+**🔍 Teroka (explore)**
+- Pick two numbers from 1 to 12 with the ▲ ▼ buttons. The answer stays hidden as **?** until the child counts it or taps it.
+- Three ways to see it:
+  - **🍎 Kumpulan**: 3 plates with 4 things on each.
+  - **🟦 Susunan**: an array of 3 rows of 4 squares.
+  - **🐸 Lompat**: a frog makes 3 jumps of 4 on a number line.
+- **▶ Tunjuk** builds the picture one group, row or jump at a time. The running total appears (4, 8, 12), the line below grows (4 + 4 + 4 = 12), and the phone's Malay voice says each number.
+- **🔄 Tukar** swaps the numbers (the array turns on its side) to show that 3 × 4 and 4 × 3 give the same answer.
+- **🎲** picks random numbers. The **Sifir** list underneath shows the whole times table; tap a line to see it.
+
+**⭐ Kuiz**
+- 10 questions with a picture to count and 4 answers to choose from. Levels: Mudah (1–5), the times table picked in Teroka, or Campur (2–10).
+- A wrong answer plays the counting animation so the child sees why. Stars and best scores are saved on the phone.
+
+Sound uses the phone's Malay voice (Indonesian if there is no Malay one) and can be turned off with 🔊.
+
+Play it at `/darab/` on the same site, for example https://wosoldgit-maker.github.io/wau-game/darab/
